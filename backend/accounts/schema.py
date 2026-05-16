@@ -96,7 +96,13 @@ class RolType(DjangoObjectType):
         fields = "__all__"
     
     def resolve_permisosLista(self, info):
-        return self.permisos if self.permisos else []
+        if not self.permisos:
+            return []
+        if isinstance(self.permisos, list):
+            return self.permisos
+        if isinstance(self.permisos, dict):
+            return [key for key, val in self.permisos.items() if val]
+        return []
 
 
 class UsuarioType(DjangoObjectType):
@@ -501,6 +507,13 @@ class AsignarRolAUsuarioMutation(graphene.Mutation):
             )
 
 
+class LogoutMutation(graphene.Mutation):
+    success = graphene.Boolean()
+
+    def mutate(self, info):
+        return LogoutMutation(success=True)
+
+
 class CambiarPasswordMutation(graphene.Mutation):
     class Arguments:
         old_password = graphene.String(required=True)
@@ -544,7 +557,8 @@ class Mutation(graphene.ObjectType):
     verify_token = graphql_jwt.Verify.Field()
     refresh_token = graphql_jwt.Refresh.Field()
     delete_token_cookie = graphql_jwt.DeleteJSONWebTokenCookie.Field()
-    
+    logout = LogoutMutation.Field()
+
     # Roles
     crearRol = CrearRolMutation.Field()
     actualizarRol = ActualizarRolMutation.Field()

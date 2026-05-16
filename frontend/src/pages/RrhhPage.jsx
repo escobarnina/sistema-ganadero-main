@@ -1,9 +1,35 @@
-// frontend/src/pages/RrhhPage.jsx (versión con tarjetas)
+// frontend/src/pages/RrhhPage.jsx
 import React, { useState } from 'react'
 import { useRrhh } from '../hooks/useRrhh'
 import TipoEmpleadoForm from '../components/TipoEmpleadoForm'
 import EmpleadoForm from '../components/EmpleadoForm'
-import EmpleadoCard from '../components/EmpleadoCard'
+
+const estadoConfig = {
+  ACTIVO:     { cls: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', dot: 'bg-emerald-500' },
+  INACTIVO:   { cls: 'bg-red-50 text-red-700 ring-red-600/20',            dot: 'bg-red-500'     },
+  LICENCIA:   { cls: 'bg-amber-50 text-amber-700 ring-amber-600/20',      dot: 'bg-amber-500'   },
+  VACACIONES: { cls: 'bg-blue-50 text-blue-700 ring-blue-600/20',         dot: 'bg-blue-500'    },
+}
+
+const getIniciales = (nombre = '') =>
+  nombre.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+
+const avatarColors = [
+  'bg-violet-100 text-violet-700',
+  'bg-sky-100 text-sky-700',
+  'bg-emerald-100 text-emerald-700',
+  'bg-rose-100 text-rose-700',
+  'bg-amber-100 text-amber-700',
+  'bg-indigo-100 text-indigo-700',
+]
+
+const getAvatarColor = (id = '') =>
+  avatarColors[id.charCodeAt(id.length - 1) % avatarColors.length]
+
+const fmt = {
+  fecha: (f) => f ? new Date(f).toLocaleDateString('es-PY') : '—',
+  salario: (s) => s ? `Gs. ${parseFloat(s).toLocaleString('es-PY')}` : '—',
+}
 
 const RrhhPage = () => {
   const { tipos, empleados, eliminarTipo, eliminarEmpleado, loading } = useRrhh()
@@ -12,174 +38,255 @@ const RrhhPage = () => {
   const [showEmpleadoModal, setShowEmpleadoModal] = useState(false)
   const [editTipo, setEditTipo] = useState(null)
   const [editEmpleado, setEditEmpleado] = useState(null)
-
-  const tabs = [
-    { id: 'empleados', label: '👨‍🌾 Empleados', count: empleados.length },
-    { id: 'tipos', label: '📋 Tipos de Empleado', count: tipos.length },
-  ]
+  const [busqueda, setBusqueda] = useState('')
 
   const handleEliminarTipo = async (id, nombre) => {
-    if (window.confirm(`¿Eliminar el tipo "${nombre}"?`)) {
-      const result = await eliminarTipo(id)
-      if (result.success) {
-        alert('✅ Tipo eliminado')
-      } else {
-        alert(`❌ Error: ${result.error}`)
-      }
-    }
+    if (!window.confirm(`¿Eliminar el tipo "${nombre}"?`)) return
+    const r = await eliminarTipo(id)
+    alert(r.success ? '✅ Tipo eliminado' : `❌ ${r.error}`)
   }
 
   const handleEliminarEmpleado = async (id, nombre) => {
-    if (window.confirm(`¿Eliminar al empleado "${nombre}"?`)) {
-      const result = await eliminarEmpleado(id)
-      if (result.success) {
-        alert('✅ Empleado eliminado')
-      } else {
-        alert(`❌ Error: ${result.error}`)
-      }
-    }
+    if (!window.confirm(`¿Eliminar al empleado "${nombre}"?`)) return
+    const r = await eliminarEmpleado(id)
+    alert(r.success ? '✅ Empleado eliminado' : `❌ ${r.error}`)
   }
+
+  const empleadosFiltrados = empleados.filter(e =>
+    !busqueda ||
+    e.nombreCompleto?.toLowerCase().includes(busqueda.toLowerCase()) ||
+    e.ci?.toLowerCase().includes(busqueda.toLowerCase()) ||
+    e.tipo?.nombre?.toLowerCase().includes(busqueda.toLowerCase())
+  )
+
+  const activos = empleados.filter(e => e.estado === 'ACTIVO').length
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-600 border-t-transparent" />
       </div>
     )
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Encabezado */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-blue-800">👨‍🌾 Módulo de RRHH</h1>
-        <p className="text-gray-600">Gestión de empleados y tipos de cargo</p>
+        <h1 className="text-2xl font-bold text-gray-900">Recursos Humanos</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Gestión de personal y cargos</p>
       </div>
 
-      {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-          <div className="text-sm text-gray-500">Total Empleados</div>
-          <div className="text-2xl font-bold text-blue-700">{empleados.length}</div>
+      {/* KPIs */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="rounded-xl bg-white border border-gray-100 shadow-sm px-5 py-4">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Total empleados</p>
+          <p className="mt-1 text-3xl font-bold text-gray-900">{empleados.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
-          <div className="text-sm text-gray-500">Empleados Activos</div>
-          <div className="text-2xl font-bold text-green-700">{empleados.filter(e => e.estado === 'ACTIVO').length}</div>
+        <div className="rounded-xl bg-white border border-gray-100 shadow-sm px-5 py-4">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Activos</p>
+          <p className="mt-1 text-3xl font-bold text-emerald-600">{activos}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
-          <div className="text-sm text-gray-500">Tipos de Cargo</div>
-          <div className="text-2xl font-bold text-purple-700">{tipos.length}</div>
+        <div className="rounded-xl bg-white border border-gray-100 shadow-sm px-5 py-4">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Tipos de cargo</p>
+          <p className="mt-1 text-3xl font-bold text-indigo-600">{tipos.length}</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-4">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-4 font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label} ({tab.count})
-            </button>
-          ))}
-        </nav>
+      <div className="flex gap-1 border-b border-gray-200 mb-6">
+        {[
+          { id: 'empleados', label: 'Empleados', count: empleados.length },
+          { id: 'tipos',     label: 'Tipos de cargo', count: tipos.length },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === tab.id
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tab.label}
+            <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
+              activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
       </div>
 
-      {/* Content - Empleados en formato tarjetas */}
+      {/* ── EMPLEADOS ── */}
       {activeTab === 'empleados' && (
         <div>
-          <div className="flex justify-end mb-4">
+          <div className="flex items-center justify-between mb-4 gap-3">
+            <input
+              type="text"
+              placeholder="Buscar por nombre, CI o cargo…"
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              className="flex-1 max-w-xs text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
             <button
-              onClick={() => {
-                setEditEmpleado(null)
-                setShowEmpleadoModal(true)
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+              onClick={() => { setEditEmpleado(null); setShowEmpleadoModal(true) }}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
             >
-              + Nuevo Empleado
+              + Nuevo empleado
             </button>
           </div>
 
-          {empleados.length === 0 ? (
-            <div className="text-center py-20 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">No hay empleados registrados</p>
+          {empleadosFiltrados.length === 0 ? (
+            <div className="text-center py-20 text-gray-400 text-sm bg-gray-50 rounded-xl">
+              {busqueda ? 'Sin resultados para la búsqueda' : 'No hay empleados registrados'}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {empleados.map(empleado => (
-                <EmpleadoCard
-                  key={empleado.id}
-                  empleado={empleado}
-                  onEditar={(emp) => {
-                    setEditEmpleado(emp)
-                    setShowEmpleadoModal(true)
-                  }}
-                  onEliminar={handleEliminarEmpleado}
-                />
-              ))}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Contacto</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Ingreso</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Salario</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
+                    <th className="px-5 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {empleadosFiltrados.map(emp => {
+                    const cfg = estadoConfig[emp.estado] || estadoConfig.INACTIVO
+                    return (
+                      <tr key={emp.id} className="hover:bg-gray-50/60 transition-colors">
+                        {/* Empleado */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${getAvatarColor(emp.id)}`}>
+                              {getIniciales(emp.nombreCompleto)}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 leading-tight">{emp.nombreCompleto}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{emp.tipo?.nombre || '—'}</p>
+                              {emp.ci && <p className="text-xs text-gray-400">CI {emp.ci}</p>}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Contacto */}
+                        <td className="px-5 py-4">
+                          <div className="space-y-0.5">
+                            {emp.telefono && (
+                              <p className="text-gray-600">{emp.telefono}</p>
+                            )}
+                            {emp.email && (
+                              <p className="text-gray-400 text-xs truncate max-w-[180px]">{emp.email}</p>
+                            )}
+                            {!emp.telefono && !emp.email && <span className="text-gray-300">—</span>}
+                          </div>
+                        </td>
+
+                        {/* Ingreso */}
+                        <td className="px-5 py-4 text-gray-600 whitespace-nowrap">
+                          {fmt.fecha(emp.fechaIngreso)}
+                        </td>
+
+                        {/* Salario */}
+                        <td className="px-5 py-4 font-medium text-gray-700 whitespace-nowrap">
+                          {fmt.salario(emp.salario)}
+                        </td>
+
+                        {/* Estado */}
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${cfg.cls}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                            {emp.estado}
+                          </span>
+                        </td>
+
+                        {/* Acciones */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2 justify-end">
+                            <button
+                              onClick={() => { setEditEmpleado(emp); setShowEmpleadoModal(true) }}
+                              className="text-xs text-gray-500 hover:text-blue-600 font-medium px-2.5 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleEliminarEmpleado(emp.id, emp.nombreCompleto)}
+                              className="text-xs text-gray-400 hover:text-red-600 font-medium px-2.5 py-1.5 rounded-md hover:bg-red-50 transition-colors"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
       )}
 
-      {/* Content - Tipos */}
+      {/* ── TIPOS DE CARGO ── */}
       {activeTab === 'tipos' && (
         <div>
           <div className="flex justify-end mb-4">
             <button
-              onClick={() => {
-                setEditTipo(null)
-                setShowTipoModal(true)
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+              onClick={() => { setEditTipo(null); setShowTipoModal(true) }}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
             >
-              + Nuevo Tipo
+              + Nuevo tipo
             </button>
           </div>
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salario Base</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Nombre</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Descripción</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Salario base</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
+                  <th className="px-5 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-50">
                 {tipos.map(t => (
-                  <tr key={t.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium">{t.nombre}</td>
-                    <td className="px-6 py-4 text-sm">{t.descripcion || '-'}</td>
-                    <td className="px-6 py-4 text-sm">Gs. {parseFloat(t.salarioBase || 0).toLocaleString()}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs ${t.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  <tr key={t.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="px-5 py-4 font-medium text-gray-900">{t.nombre}</td>
+                    <td className="px-5 py-4 text-gray-500">{t.descripcion || '—'}</td>
+                    <td className="px-5 py-4 font-medium text-gray-700">
+                      Gs. {parseFloat(t.salarioBase || 0).toLocaleString('es-PY')}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                        t.activo
+                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                          : 'bg-gray-50 text-gray-500 ring-gray-500/20'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${t.activo ? 'bg-emerald-500' : 'bg-gray-400'}`} />
                         {t.activo ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center space-x-2">
-                      <button
-                        onClick={() => {
-                          setEditTipo(t)
-                          setShowTipoModal(true)
-                        }}
-                        className="text-yellow-600 hover:text-yellow-800"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => handleEliminarTipo(t.id, t.nombre)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        🗑️
-                      </button>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          onClick={() => { setEditTipo(t); setShowTipoModal(true) }}
+                          className="text-xs text-gray-500 hover:text-blue-600 font-medium px-2.5 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleEliminarTipo(t.id, t.nombre)}
+                          className="text-xs text-gray-400 hover:text-red-600 font-medium px-2.5 py-1.5 rounded-md hover:bg-red-50 transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -189,20 +296,14 @@ const RrhhPage = () => {
         </div>
       )}
 
-      {/* Modal Tipo Empleado */}
+      {/* Modal Tipo */}
       {showTipoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="max-w-md w-full">
             <TipoEmpleadoForm
               tipoParaEditar={editTipo}
-              onSuccess={() => {
-                setShowTipoModal(false)
-                setEditTipo(null)
-              }}
-              onCancel={() => {
-                setShowTipoModal(false)
-                setEditTipo(null)
-              }}
+              onSuccess={() => { setShowTipoModal(false); setEditTipo(null) }}
+              onCancel={() => { setShowTipoModal(false); setEditTipo(null) }}
             />
           </div>
         </div>
@@ -210,18 +311,12 @@ const RrhhPage = () => {
 
       {/* Modal Empleado */}
       {showEmpleadoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="max-w-2xl w-full">
             <EmpleadoForm
               empleadoParaEditar={editEmpleado}
-              onSuccess={() => {
-                setShowEmpleadoModal(false)
-                setEditEmpleado(null)
-              }}
-              onCancel={() => {
-                setShowEmpleadoModal(false)
-                setEditEmpleado(null)
-              }}
+              onSuccess={() => { setShowEmpleadoModal(false); setEditEmpleado(null) }}
+              onCancel={() => { setShowEmpleadoModal(false); setEditEmpleado(null) }}
             />
           </div>
         </div>

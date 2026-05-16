@@ -31,7 +31,7 @@ export const useReproduccion = () => {
   // Función para crear inseminación
   const crearInseminacion = async (variables) => {
     try {
-      const fincaId = localStorage.getItem('fincaId') || 'tu-finca-id-aqui'
+      const fincaId = localStorage.getItem('fincaId') || '1'
       
       const { data } = await crearInseminacionMutation({
         variables: {
@@ -57,7 +57,7 @@ export const useReproduccion = () => {
   // Función para crear diagnóstico de preñez
   const crearDiagnostico = async (variables) => {
     try {
-      const fincaId = localStorage.getItem('fincaId') || 'tu-finca-id-aqui'
+      const fincaId = localStorage.getItem('fincaId') || '1'
       
       const { data } = await crearDiagnosticoMutation({
         variables: {
@@ -80,7 +80,7 @@ export const useReproduccion = () => {
   // Función para crear reproducción (parto)
   const crearReproduccion = async (variables) => {
     try {
-      const fincaId = localStorage.getItem('fincaId') || 'tu-finca-id-aqui'
+      const fincaId = localStorage.getItem('fincaId') || '1'
       
       const { data } = await crearReproduccionMutation({
         variables: {

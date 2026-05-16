@@ -132,7 +132,7 @@ const ProduccionPage = () => {
                           </div>
                           <div className="text-right">
                             <p className="text-sm">Inicio: {new Date(lactancia.fechaInicio).toLocaleDateString()}</p>
-                            <p className="text-sm font-bold text-blue-600">{lactancia.promedioDiario?.toFixed(1) || 0} L/día</p>
+                            <p className="text-sm font-bold text-blue-600">{parseFloat(lactancia.promedioDiario || 0).toFixed(1)} L/día</p>
                           </div>
                         </div>
                       </div>
@@ -187,8 +187,8 @@ const ProduccionPage = () => {
                     <td className="px-6 py-4 text-sm">{l.numeroLactancia}</td>
                     <td className="px-6 py-4 text-sm">{new Date(l.fechaInicio).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-sm">{l.diasProduccion || 0}</td>
-                    <td className="px-6 py-4 text-sm">{l.totalLitros?.toFixed(1) || 0} L</td>
-                    <td className="px-6 py-4 text-sm">{l.promedioDiario?.toFixed(1) || 0} L/día</td>
+                    <td className="px-6 py-4 text-sm">{parseFloat(l.totalLitros || 0).toFixed(1)} L</td>
+                    <td className="px-6 py-4 text-sm">{parseFloat(l.promedioDiario || 0).toFixed(1)} L/día</td>
                     <td className="px-6 py-4 text-sm">
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         l.estado === 'ACTIVA' ? 'bg-green-100 text-green-800' : 

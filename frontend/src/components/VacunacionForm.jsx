@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 
 export default function VacunacionForm({ vacunacion, vacunas, animales, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    fincaId: '1',
+    fincaId: localStorage.getItem('fincaId') || '1',
     animalId: '',
     vacunaId: '',
     fechaAplicacion: new Date().toISOString().split('T')[0],
@@ -16,7 +16,7 @@ export default function VacunacionForm({ vacunacion, vacunas, animales, onSubmit
   useEffect(() => {
     if (vacunacion) {
       setFormData({
-        fincaId: '1',
+        fincaId: localStorage.getItem('fincaId') || '1',
         animalId: vacunacion.animal?.id || '',
         vacunaId: vacunacion.vacuna?.id || '',
         fechaAplicacion: vacunacion.fechaAplicacion || '',
