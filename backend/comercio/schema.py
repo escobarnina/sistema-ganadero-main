@@ -52,7 +52,7 @@ class Query(graphene.ObjectType):
     notas_venta = graphene.List(NotaVentaType)
     detalles_venta = graphene.List(DetalleVentaType)
     muertes_bajas = graphene.List(MuerteBajaType)
-    animales_activos = graphene.List("animales.schema.AnimalType")
+    animales_disponibles = graphene.List("animales.schema.AnimalType")
     ventas_por_anio = graphene.List(
         NotaVentaType,
         anio=graphene.Int(required=True)
@@ -70,7 +70,7 @@ class Query(graphene.ObjectType):
     def resolve_muertes_bajas(self, info):
         return MuerteBaja.objects.all()
 
-    def resolve_animales_activos(self, info):
+    def resolve_animales_disponibles(self, info):
         from animales.models import Animal
         return Animal.objects.filter(
             estado='ACTIVO'
@@ -221,7 +221,7 @@ class CrearDetalleVenta(graphene.Mutation):
     class Arguments:
         nota_venta_id = graphene.ID(required=True)
         animal_id = graphene.ID(required=True)
-        precio_unitario = graphene.Decimal(required=True)
+        precio_kg = graphene.Decimal(required=True)
         peso_venta_kg = graphene.Decimal(required=True)
 
     detalle_venta = graphene.Field(DetalleVentaType)
@@ -229,7 +229,7 @@ class CrearDetalleVenta(graphene.Mutation):
     message = graphene.String()
 
     @login_required
-    def mutate(self, info, nota_venta_id, animal_id, precio_unitario, peso_venta_kg):
+    def mutate(self, info, nota_venta_id, animal_id, precio_kg, peso_venta_kg):
         try:
             from animales.models import Animal
             nota_venta = NotaVenta.objects.get(id=nota_venta_id)
@@ -237,7 +237,7 @@ class CrearDetalleVenta(graphene.Mutation):
             detalle = DetalleVenta.objects.create(
                 nota_venta=nota_venta,
                 animal=animal,
-                precio_unitario=precio_unitario,
+                precio_unitario=precio_kg,
                 peso_venta_kg=peso_venta_kg
             )
             return CrearDetalleVenta(detalle_venta=detalle, success=True, message="Detalle de venta creado exitosamente")

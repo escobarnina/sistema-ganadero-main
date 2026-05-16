@@ -35,7 +35,7 @@ export const GET_CLIENTES = gql`
 
 export const GET_ANIMALES_DISPONIBLES = gql`
   query GetAnimalesDisponibles {
-    animalesActivos {
+    animalesDisponibles {
       id
       nroArete
       nombre

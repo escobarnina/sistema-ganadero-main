@@ -52,7 +52,7 @@ export const useVentas = () => {
   return {
     notasVenta: data?.notasVenta || [],
     clientes: clientesData?.clientes || [],
-    animalesDisponibles: animalesData?.animalesActivos || [],
+    animalesDisponibles: animalesData?.animalesDisponibles || [],
     loading: loading || loadingClientes || loadingAnimales,
     error,
     crearNotaVenta,
