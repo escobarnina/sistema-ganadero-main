@@ -6,40 +6,10 @@
   :root {
     --sidebar-width: 240px;
     --sidebar-collapsed: 68px;
-    --navbar-height: 60px;
     --radius: 12px;
-    --transition: all .2s cubic-bezier(.4, 0, .2, 1);
   }
 
-  * {
-    box-sizing: border-box;
-  }
-
-  html {
-    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  body {
-    @apply bg-slate-50 text-slate-900;
-  }
-
-  /* Scrollbar personalizado */
-  ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-400;
-  }
-
-  /* Animaciones globales */
+  /* Animaciones reutilizables */
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -55,7 +25,7 @@
     to   { opacity: 1; transform: translateX(0); }
   }
 
-  .animate-fade-in   { animation: fadeIn .25s ease forwards; }
-  .animate-modal-in  { animation: modalIn .2s cubic-bezier(.34,1.56,.64,1) forwards; }
-  .animate-slide-in  { animation: slideIn .2s ease forwards; }
+  .animate-fade-in  { animation: fadeIn .25s ease forwards; }
+  .animate-modal-in { animation: modalIn .2s cubic-bezier(.34,1.56,.64,1) forwards; }
+  .animate-slide-in { animation: slideIn .2s ease forwards; }
 }

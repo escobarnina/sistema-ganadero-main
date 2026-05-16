@@ -3,99 +3,86 @@ import { useVentas } from '../hooks/useVentas'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorMessage from '../components/ErrorMessage'
 import VentaForm from '../components/VentaForm'
+import PageHeader from '../components/ui/PageHeader'
+import PageAlert from '../components/ui/PageAlert'
+import EmptyState from '../components/ui/EmptyState'
+
+import {
+  Box, Paper, Table, TableHead, TableBody, TableRow, TableCell, Typography,
+} from '@mui/material'
+import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined'
 
 export default function VentasPage() {
-  const { 
-    notasVenta, 
-    clientes, 
-    animalesDisponibles, 
-    loading, 
-    error, 
-    crearNotaVenta,
-    crearDetalleVenta 
-  } = useVentas()
-  
+  const { notasVenta, clientes, animalesDisponibles, loading, error, crearNotaVenta, crearDetalleVenta } = useVentas()
   const [showForm, setShowForm] = useState(false)
   const [message, setMessage] = useState(null)
 
   const handleCreate = async (formData, detalles) => {
-    // Crear la nota de venta
     const result = await crearNotaVenta(formData)
-    
     if (result.success && detalles.length > 0) {
-      // Crear cada detalle
       const notaVentaId = result.id
-      
-      for (const detalle of detalles) {
-        await crearDetalleVenta({
-          notaVentaId: notaVentaId,
-          animalId: detalle.animalId,
-          pesoVentaKg: detalle.pesoVentaKg,
-          precioKg: detalle.precioKg
-        })
+      for (const d of detalles) {
+        await crearDetalleVenta({ notaVentaId, animalId: d.animalId, pesoVentaKg: d.pesoVentaKg, precioKg: d.precioKg })
       }
-      
       setMessage({ type: 'success', text: 'Venta registrada exitosamente' })
       setShowForm(false)
     } else {
       setMessage({ type: 'error', text: result.message || 'Error al registrar venta' })
     }
-    
-    setTimeout(() => setMessage(null), 3000)
+    setTimeout(() => setMessage(null), 3500)
   }
 
   if (loading) return <LoadingSpinner />
   if (error) return <ErrorMessage message={error.message} />
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">🛒 Ventas</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
-        >
-          + Nueva Venta
-        </button>
-      </div>
+    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      <PageHeader
+        title="Ventas"
+        icon={PointOfSaleOutlinedIcon}
+        onAdd={() => setShowForm(true)}
+        addLabel="Nueva Venta"
+      />
 
-      {message && (
-        <div className={`mb-4 p-3 rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {message.text}
-        </div>
-      )}
+      <PageAlert message={message} onClose={() => setMessage(null)} />
 
       {notasVenta.length === 0 ? (
-        <div className="text-center py-20 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">No hay ventas registradas</p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="mt-4 text-green-600 hover:text-green-700"
-          >
-            + Registrar primera venta
-          </button>
-        </div>
+        <EmptyState
+          icon={PointOfSaleOutlinedIcon}
+          title="No hay ventas registradas"
+          description="Registrá la primera venta de animales."
+          onAction={() => setShowForm(true)}
+          actionLabel="Registrar primera venta"
+        />
       ) : (
-        <div className="overflow-x-auto bg-white rounded-lg shadow">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Fecha</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Cliente</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Observaciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {notasVenta.map((venta) => (
-                <tr key={venta.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm">{new Date(venta.fechaVenta).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 text-sm">{venta.cliente?.nombre || 'N/A'} {venta.cliente?.apellidos || ''}</td>
-                  <td className="px-6 py-4 text-sm">{venta.observaciones || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Cliente</TableCell>
+                  <TableCell>Observaciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {notasVenta.map((v) => (
+                  <TableRow key={v.id} hover>
+                    <TableCell>{new Date(v.fechaVenta).toLocaleDateString('es-PY')}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {[v.cliente?.nombre, v.cliente?.apellidos].filter(Boolean).join(' ') || 'N/A'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">{v.observaciones || '—'}</Typography>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
       )}
 
       {showForm && (
@@ -106,6 +93,6 @@ export default function VentasPage() {
           onCancel={() => setShowForm(false)}
         />
       )}
-    </div>
+    </Box>
   )
 }

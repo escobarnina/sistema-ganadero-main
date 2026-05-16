@@ -1,452 +1,299 @@
-// frontend/src/pages/AnimalesPage.jsx
 import { useState } from 'react'
 import { useAnimales } from '../hooks/useAnimales'
 import { useParcelas } from '../hooks/useParcelas'
-import LoadingSpinner from '../components/LoadingSpinner'
-import ErrorMessage from '../components/ErrorMessage'
-import AnimalForm from '../components/AnimalForm'
-import ParcelaForm from '../components/ParcelaForm'
+import { useFincas }   from '../hooks/useFincas'
+import LoadingSpinner  from '../components/LoadingSpinner'
+import ErrorMessage    from '../components/ErrorMessage'
+import PageAlert       from '../components/ui/PageAlert'
+import ConfirmDialog   from '../components/ui/ConfirmDialog'
+import StatusChip      from '../components/ui/StatusChip'
+import EmptyState      from '../components/ui/EmptyState'
+import AnimalForm      from '../components/AnimalForm'
+import ParcelaForm     from '../components/ParcelaForm'
 import MoverAnimalForm from '../components/MoverAnimalForm'
 import ReportesButtons from '../components/ReportesButtons'
 import { generarPDFAnimales, generarExcelAnimales } from '../services/reportesService'
-import { useFincas } from '../hooks/useFincas'
+
+import {
+  Box, Card, CardContent, CardActions, Paper, Table, TableHead, TableBody, TableRow, TableCell,
+  Typography, Tabs, Tab, Chip, IconButton, Tooltip, Button, Grid,
+} from '@mui/material'
+import PetsOutlinedIcon         from '@mui/icons-material/PetsOutlined'
+import LocationOnOutlinedIcon   from '@mui/icons-material/LocationOnOutlined'
+import EditOutlinedIcon         from '@mui/icons-material/EditOutlined'
+import DeleteOutlinedIcon       from '@mui/icons-material/DeleteOutlined'
+import AddOutlinedIcon          from '@mui/icons-material/AddOutlined'
+import GrassOutlinedIcon        from '@mui/icons-material/GrassOutlined'
+import ExitToAppOutlinedIcon    from '@mui/icons-material/ExitToAppOutlined'
 
 export default function AnimalesPage() {
   const { animales, razas, categorias, loading, error, crearAnimal, actualizarAnimal, eliminarAnimal } = useAnimales()
-  const { parcelas, crearParcela, actualizarParcela, eliminarParcela, moverAnimalAParcela, sacarAnimalDeParcela, loading: loadingParcelas } = useParcelas()
+  const { parcelas, crearParcela, actualizarParcela, eliminarParcela, moverAnimalAParcela, sacarAnimalDeParcela, loading: loadingP } = useParcelas()
   const { fincaActual } = useFincas()
-  
-  const [activeTab, setActiveTab] = useState('animales')
-  const [showForm, setShowForm] = useState(false)
+
+  const [tabIdx, setTabIdx]               = useState(0)
+  const [showAnimalForm, setShowAnimalForm] = useState(false)
   const [showParcelaForm, setShowParcelaForm] = useState(false)
-  const [showMoverForm, setShowMoverForm] = useState(false)
-  const [editingAnimal, setEditingAnimal] = useState(null)
-  const [editingParcela, setEditingParcela] = useState(null)
+  const [showMoverForm, setShowMoverForm]  = useState(false)
+  const [editAnimal, setEditAnimal]        = useState(null)
+  const [editParcela, setEditParcela]      = useState(null)
   const [selectedAnimal, setSelectedAnimal] = useState(null)
-  const [message, setMessage] = useState(null)
-  const [showConfirm, setShowConfirm] = useState(null)
+  const [message, setMessage]             = useState(null)
+  const [confirmAnimalId, setConfirmAnimalId] = useState(null)
+  const [confirmParcelaId, setConfirmParcelaId] = useState(null)
+  const [confirmName, setConfirmName]     = useState('')
+  const [confirmSacarId, setConfirmSacarId] = useState(null)
   const [reporteLoading, setReporteLoading] = useState(false)
 
-  const tabs = [
-    { id: 'animales', label: '🐄 Animales', count: animales.length },
-    { id: 'parcelas', label: '📍 Parcelas', count: parcelas.length },
-  ]
+  const notify = (r) => {
+    setMessage({ type: r.success ? 'success' : 'error', text: r.message })
+    setTimeout(() => setMessage(null), 3000)
+  }
 
-  // Funciones para Reportes
-  const handlePDFAnimales = async () => {
+  // Animals
+  const handleCreateAnimal = async (data) => { const r = await crearAnimal(data);      notify(r); if (r.success) { setShowAnimalForm(false); setEditAnimal(null) } }
+  const handleUpdateAnimal = async (data) => { const r = await actualizarAnimal(editAnimal.id, data); notify(r); if (r.success) { setShowAnimalForm(false); setEditAnimal(null) } }
+  const handleDeleteAnimal = async ()      => { const r = await eliminarAnimal(confirmAnimalId); notify(r); setConfirmAnimalId(null) }
+
+  // Parcelas
+  const handleCreateParcela = async (data) => { const r = await crearParcela(data);         notify(r); if (r.success) { setShowParcelaForm(false); setEditParcela(null) } }
+  const handleUpdateParcela = async (data) => { const r = await actualizarParcela(editParcela.id, data); notify(r); if (r.success) { setShowParcelaForm(false); setEditParcela(null) } }
+  const handleDeleteParcela = async ()      => { const r = await eliminarParcela(confirmParcelaId); notify(r); setConfirmParcelaId(null) }
+  const handleMoverAnimal   = async (data)  => { const r = await moverAnimalAParcela(data); notify(r); if (r.success) { setShowMoverForm(false); setSelectedAnimal(null) } }
+  const handleSacarAnimal   = async ()      => {
+    const r = await sacarAnimalDeParcela(confirmSacarId, new Date().toISOString().split('T')[0])
+    notify(r)
+    setConfirmSacarId(null)
+  }
+
+  // Reports
+  const handlePDF = async () => {
     setReporteLoading(true)
-    try {
-      generarPDFAnimales(animales, fincaActual?.nombre || 'Mi Finca')
-    } catch (error) {
-      console.error('Error generando PDF:', error)
-      alert('Error al generar el reporte PDF')
-    }
+    try { generarPDFAnimales(animales, fincaActual?.nombre || 'Mi Finca') } catch (e) { console.error(e) }
+    setReporteLoading(false)
+  }
+  const handleExcel = async () => {
+    setReporteLoading(true)
+    try { generarExcelAnimales(animales, fincaActual?.nombre || 'Mi Finca') } catch (e) { console.error(e) }
     setReporteLoading(false)
   }
 
-  const handleExcelAnimales = async () => {
-    setReporteLoading(true)
-    try {
-      generarExcelAnimales(animales, fincaActual?.nombre || 'Mi Finca')
-    } catch (error) {
-      console.error('Error generando Excel:', error)
-      alert('Error al generar el reporte Excel')
-    }
-    setReporteLoading(false)
-  }
-
-  // Funciones para Animales
-  const handleCreateAnimal = async (data) => {
-    const result = await crearAnimal(data)
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    if (result.success) {
-      setShowForm(false)
-    }
-    setTimeout(() => setMessage(null), 3000)
-  }
-
-  const handleEditAnimal = (animal) => {
-    setEditingAnimal(animal)
-    setShowForm(true)
-  }
-
-  const handleUpdateAnimal = async (data) => {
-    const result = await actualizarAnimal(editingAnimal.id, data)
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    if (result.success) {
-      setShowForm(false)
-      setEditingAnimal(null)
-    }
-    setTimeout(() => setMessage(null), 3000)
-  }
-
-  const handleDeleteAnimal = async (id) => {
-    const result = await eliminarAnimal(id)
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    setShowConfirm(null)
-    setTimeout(() => setMessage(null), 3000)
-  }
-
-  // Funciones para Parcelas
-  const handleCreateParcela = async (data) => {
-    const result = await crearParcela(data)
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    if (result.success) {
-      setShowParcelaForm(false)
-    }
-    setTimeout(() => setMessage(null), 3000)
-  }
-
-  const handleEditParcela = (parcela) => {
-    setEditingParcela(parcela)
-    setShowParcelaForm(true)
-  }
-
-  const handleUpdateParcela = async (data) => {
-    const result = await actualizarParcela(editingParcela.id, data)
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    if (result.success) {
-      setShowParcelaForm(false)
-      setEditingParcela(null)
-    }
-    setTimeout(() => setMessage(null), 3000)
-  }
-
-  const handleDeleteParcela = async (id, nombre) => {
-    if (window.confirm(`¿Eliminar la parcela "${nombre}"?`)) {
-      const result = await eliminarParcela(id)
-      setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-      setTimeout(() => setMessage(null), 3000)
-    }
-  }
-
-  const handleMoverAnimal = async (data) => {
-    const result = await moverAnimalAParcela(data)
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    if (result.success) {
-      setShowMoverForm(false)
-      setSelectedAnimal(null)
-    }
-    setTimeout(() => setMessage(null), 3000)
-  }
-
-  const handleSacarAnimal = async (movimientoId, fechaSalida) => {
-    if (window.confirm('¿Retirar este animal de la parcela?')) {
-      const result = await sacarAnimalDeParcela(movimientoId, fechaSalida)
-      setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-      setTimeout(() => setMessage(null), 3000)
-    }
-  }
-
-  if (loading || loadingParcelas) return <LoadingSpinner />
+  if (loading || loadingP) return <LoadingSpinner />
   if (error) return <ErrorMessage message={error.message} />
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">🐄 Gestión Ganadera</h1>
-        <div className="flex gap-2">
-          {activeTab === 'animales' && (
-            <ReportesButtons 
-              onPDF={handlePDFAnimales}
-              onExcel={handleExcelAnimales}
-              loading={reporteLoading}
-            />
-          )}
-        </div>
-      </div>
+    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box>
+          <Typography variant="h5" fontWeight={700}>Gestión Ganadera</Typography>
+          <Typography variant="body2" color="text.secondary">Animales y parcelas de la finca</Typography>
+        </Box>
+        {tabIdx === 0 && (
+          <ReportesButtons onPDF={handlePDF} onExcel={handleExcel} loading={reporteLoading} />
+        )}
+      </Box>
 
-      {message && (
-        <div className={`mb-4 p-3 rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {message.text}
-        </div>
-      )}
+      <PageAlert message={message} onClose={() => setMessage(null)} />
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-4">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-4 font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'border-b-2 border-green-500 text-green-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label} ({tab.count})
-            </button>
-          ))}
-        </nav>
-      </div>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={tabIdx} onChange={(_, v) => setTabIdx(v)}>
+          <Tab icon={<PetsOutlinedIcon sx={{ fontSize: 17 }} />} iconPosition="start"
+            label={`Animales (${animales.length})`} sx={{ minHeight: 48, textTransform: 'none', fontWeight: 500 }} />
+          <Tab icon={<GrassOutlinedIcon sx={{ fontSize: 17 }} />} iconPosition="start"
+            label={`Parcelas (${parcelas.length})`} sx={{ minHeight: 48, textTransform: 'none', fontWeight: 500 }} />
+        </Tabs>
+      </Box>
 
-      {/* ========================================== */}
-      {/* TAB ANIMALES */}
-      {/* ========================================== */}
-      {activeTab === 'animales' && (
+      {/* ── ANIMALES ── */}
+      {tabIdx === 0 && (
         <>
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={() => {
-                setEditingAnimal(null)
-                setShowForm(true)
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
-            >
-              + Nuevo Animal
-            </button>
-          </div>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="contained" size="small" startIcon={<AddOutlinedIcon />}
+              onClick={() => { setEditAnimal(null); setShowAnimalForm(true) }}>
+              Nuevo Animal
+            </Button>
+          </Box>
 
           {animales.length === 0 ? (
-            <div className="text-center py-20 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">No hay animales registrados</p>
-              <button
-                onClick={() => setShowForm(true)}
-                className="mt-4 text-green-600 hover:text-green-700"
-              >
-                + Crear el primer animal
-              </button>
-            </div>
+            <EmptyState icon={PetsOutlinedIcon} title="No hay animales registrados"
+              description="Creá el primer animal de la finca."
+              onAction={() => setShowAnimalForm(true)} actionLabel="Crear animal" />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {animales.map((animal) => (
-                <div key={animal.id} className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-gray-500 text-sm">Arete: {animal.nroArete}</p>
-                      <h3 className="text-lg font-bold text-gray-800">{animal.nombre || 'Sin nombre'}</h3>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      animal.estado === 'ACTIVO' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {animal.estado}
-                    </span>
-                  </div>
-                  
-                  <div className="mt-3 space-y-1 text-sm">
-                    <p><span className="text-gray-500">Raza:</span> {animal.raza?.nombre || 'N/A'}</p>
-                    <p><span className="text-gray-500">Categoría:</span> {animal.categoria?.nombre || 'N/A'}</p>
-                    <p><span className="text-gray-500">Peso:</span> {animal.peso ? `${animal.peso} kg` : 'N/A'}</p>
-                    <p><span className="text-gray-500">Sexo:</span> {animal.sexo === 'MACHO' ? 'Macho' : 'Hembra'}</p>
-                    <p><span className="text-gray-500">Nacimiento:</span> {animal.fechaNacimiento ? new Date(animal.fechaNacimiento).toLocaleDateString() : 'N/A'}</p>
-                  </div>
-
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedAnimal(animal)
-                        setShowMoverForm(true)
-                      }}
-                      className="flex-1 bg-blue-500 text-white py-1 rounded hover:bg-blue-600 transition text-sm"
-                    >
-                      📍 Mover a Parcela
-                    </button>
-                    <button
-                      onClick={() => handleEditAnimal(animal)}
-                      className="flex-1 bg-yellow-500 text-white py-1 rounded hover:bg-yellow-600 transition"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => setShowConfirm(animal.id)}
-                      className="flex-1 bg-red-600 text-white py-1 rounded hover:bg-red-700 transition"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-
-                  {showConfirm === animal.id && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                      <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-                        <h3 className="text-lg font-bold mb-4">¿Eliminar animal?</h3>
-                        <p className="text-gray-600 mb-6">¿Estás seguro de eliminar a "{animal.nombre || animal.nroArete}"?</p>
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => handleDeleteAnimal(animal.id)}
-                            className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700"
-                          >
-                            Sí, eliminar
-                          </button>
-                          <button
-                            onClick={() => setShowConfirm(null)}
-                            className="flex-1 bg-gray-300 text-gray-800 py-2 rounded hover:bg-gray-400"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+            <Grid container spacing={2}>
+              {animales.map(animal => (
+                <Grid item xs={12} sm={6} lg={4} key={animal.id}>
+                  <Card elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <CardContent sx={{ pb: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Box>
+                          <Typography variant="caption" color="text.disabled" sx={{ fontFamily: 'monospace' }}>#{animal.nroArete}</Typography>
+                          <Typography variant="subtitle2" fontWeight={700}>{animal.nombre || 'Sin nombre'}</Typography>
+                        </Box>
+                        <StatusChip value={animal.estado} />
+                      </Box>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5, mt: 1 }}>
+                        {[
+                          ['Raza', animal.raza?.nombre || 'N/A'],
+                          ['Categoría', animal.categoria?.nombre || 'N/A'],
+                          ['Peso', animal.peso ? `${animal.peso} kg` : 'N/A'],
+                          ['Sexo', animal.sexo === 'MACHO' ? 'Macho' : 'Hembra'],
+                          ['Nacimiento', animal.fechaNacimiento ? new Date(animal.fechaNacimiento).toLocaleDateString('es-PY') : 'N/A'],
+                        ].map(([k, v]) => (
+                          <Box key={k}>
+                            <Typography variant="caption" color="text.secondary">{k}</Typography>
+                            <Typography variant="body2" fontWeight={500}>{v}</Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </CardContent>
+                    <CardActions sx={{ pt: 0, gap: 0.5, flexWrap: 'wrap' }}>
+                      <Button size="small" variant="outlined" color="info" startIcon={<LocationOnOutlinedIcon />}
+                        onClick={() => { setSelectedAnimal(animal); setShowMoverForm(true) }}
+                        sx={{ fontSize: 11, textTransform: 'none' }}>
+                        Mover a Parcela
+                      </Button>
+                      <Tooltip title="Editar">
+                        <IconButton size="small" color="warning" onClick={() => { setEditAnimal(animal); setShowAnimalForm(true) }}>
+                          <EditOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton size="small" color="error" onClick={() => { setConfirmAnimalId(animal.id); setConfirmName(animal.nombre || animal.nroArete) }}>
+                          <DeleteOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </CardActions>
+                  </Card>
+                </Grid>
               ))}
-            </div>
+            </Grid>
           )}
         </>
       )}
 
-      {/* ========================================== */}
-      {/* TAB PARCELAS */}
-      {/* ========================================== */}
-      {activeTab === 'parcelas' && (
+      {/* ── PARCELAS ── */}
+      {tabIdx === 1 && (
         <>
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={() => {
-                setEditingParcela(null)
-                setShowParcelaForm(true)
-              }}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
-            >
-              + Nueva Parcela
-            </button>
-          </div>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="contained" size="small" startIcon={<AddOutlinedIcon />}
+              onClick={() => { setEditParcela(null); setShowParcelaForm(true) }}>
+              Nueva Parcela
+            </Button>
+          </Box>
 
           {parcelas.length === 0 ? (
-            <div className="text-center py-20 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">No hay parcelas registradas</p>
-              <button
-                onClick={() => setShowParcelaForm(true)}
-                className="mt-4 text-green-600 hover:text-green-700"
-              >
-                + Crear la primera parcela
-              </button>
-            </div>
+            <EmptyState icon={GrassOutlinedIcon} title="No hay parcelas registradas"
+              description="Creá la primera parcela."
+              onAction={() => setShowParcelaForm(true)} actionLabel="Crear parcela" />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {parcelas.map((parcela) => (
-                <div key={parcela.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
-                  <div className="bg-gradient-to-r from-green-600 to-green-800 px-4 py-3 text-white">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-bold">{parcela.nombre}</h3>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        parcela.estado === 'ACTIVA' ? 'bg-green-200 text-green-800' : 
-                        parcela.estado === 'EN_DESCANSO' ? 'bg-yellow-200 text-yellow-800' : 'bg-gray-200 text-gray-800'
-                      }`}>
-                        {parcela.estado === 'ACTIVA' ? '✅ Activa' : 
-                         parcela.estado === 'EN_DESCANSO' ? '😴 En Descanso' : '🔧 Mantenimiento'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4">
-                    <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                      <div>
-                        <p className="text-gray-500">🌾 Tamaño</p>
-                        <p className="font-medium">{parcela.tamano} ha</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">🐄 Capacidad</p>
-                        <p className="font-medium">{parcela.capacidadMaxima} animales</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">🌿 Pastura</p>
-                        <p className="font-medium">{parcela.tipoPastura || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">📊 Ocupación</p>
-                        <p className="font-medium">{parcela.animalesActuales?.length || 0} / {parcela.capacidadMaxima}</p>
-                      </div>
-                    </div>
+            <Grid container spacing={2}>
+              {parcelas.map(parcela => (
+                <Grid item xs={12} md={6} key={parcela.id}>
+                  <Card elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 2, overflow: 'hidden' }}>
+                    <Box sx={{ background: 'linear-gradient(135deg,#2E7D32,#1B5E20)', px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="subtitle2" fontWeight={700} color="#fff">{parcela.nombre}</Typography>
+                      <StatusChip value={parcela.estado} />
+                    </Box>
+                    <CardContent>
+                      <Grid container spacing={1} sx={{ mb: 1.5 }}>
+                        {[
+                          ['Tamaño', `${parcela.tamano} ha`],
+                          ['Capacidad', `${parcela.capacidadMaxima} animales`],
+                          ['Pastura', parcela.tipoPastura || 'N/A'],
+                          ['Ocupación', `${parcela.animalesActuales?.length || 0} / ${parcela.capacidadMaxima}`],
+                        ].map(([k, v]) => (
+                          <Grid item xs={6} key={k}>
+                            <Typography variant="caption" color="text.secondary">{k}</Typography>
+                            <Typography variant="body2" fontWeight={600}>{v}</Typography>
+                          </Grid>
+                        ))}
+                      </Grid>
 
-                    {parcela.animalesActuales && parcela.animalesActuales.length > 0 && (
-                      <div className="border-t pt-3">
-                        <p className="text-sm font-semibold text-gray-700 mb-2">🐄 Animales actuales:</p>
-                        <div className="space-y-2">
-                          {parcela.animalesActuales.map((item) => (
-                            <div key={item.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                              <div>
-                                <span className="font-medium">{item.animal?.nroArete}</span>
-                                <span className="text-xs text-gray-500 ml-2">({item.animal?.sexo === 'MACHO' ? '♂' : '♀'})</span>
-                              </div>
-                              <div className="flex gap-2">
-                                <span className="text-xs text-gray-500">Desde: {new Date(item.fechaIngreso).toLocaleDateString()}</span>
-                                <button
-                                  onClick={() => handleSacarAnimal(item.id, new Date().toISOString().split('T')[0])}
-                                  className="text-red-500 hover:text-red-700 text-xs"
-                                >
-                                  Retirar
-                                </button>
-                              </div>
-                            </div>
+                      {parcela.animalesActuales?.length > 0 && (
+                        <Box sx={{ borderTop: '1px solid #F1F5F9', pt: 1.5 }}>
+                          <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            Animales actuales
+                          </Typography>
+                          {parcela.animalesActuales.map(item => (
+                            <Box key={item.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#F8FAFC', borderRadius: 1, p: 0.75, mt: 0.75 }}>
+                              <Box>
+                                <Typography variant="body2" fontWeight={600}>{item.animal?.nroArete}</Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  Desde: {new Date(item.fechaIngreso).toLocaleDateString('es-PY')}
+                                </Typography>
+                              </Box>
+                              <Tooltip title="Retirar animal">
+                                <IconButton size="small" color="error" onClick={() => setConfirmSacarId(item.id)}>
+                                  <ExitToAppOutlinedIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
                           ))}
-                        </div>
-                      </div>
-                    )}
+                        </Box>
+                      )}
 
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        onClick={() => handleEditParcela(parcela)}
-                        className="flex-1 bg-yellow-500 text-white py-1 rounded hover:bg-yellow-600 transition text-sm"
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        onClick={() => handleDeleteParcela(parcela.id, parcela.nombre)}
-                        className="flex-1 bg-red-600 text-white py-1 rounded hover:bg-red-700 transition text-sm"
-                      >
-                        🗑️ Eliminar
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 1.5, justifyContent: 'flex-end' }}>
+                        <Tooltip title="Editar">
+                          <IconButton size="small" color="warning" onClick={() => { setEditParcela(parcela); setShowParcelaForm(true) }}>
+                            <EditOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Eliminar">
+                          <IconButton size="small" color="error" onClick={() => { setConfirmParcelaId(parcela.id); setConfirmName(parcela.nombre) }}>
+                            <DeleteOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
               ))}
-            </div>
+            </Grid>
           )}
         </>
       )}
 
-      {/* ========================================== */}
-      {/* MODALES */}
-      {/* ========================================== */}
-
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      {/* Form overlays (keep existing form components) */}
+      {showAnimalForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="max-w-2xl w-full">
             <AnimalForm
-              animal={editingAnimal}
-              razas={razas}
-              categorias={categorias}
-              onSubmit={editingAnimal ? handleUpdateAnimal : handleCreateAnimal}
-              onCancel={() => {
-                setShowForm(false)
-                setEditingAnimal(null)
-              }}
+              animal={editAnimal} razas={razas} categorias={categorias}
+              onSubmit={editAnimal ? handleUpdateAnimal : handleCreateAnimal}
+              onCancel={() => { setShowAnimalForm(false); setEditAnimal(null) }}
             />
           </div>
         </div>
       )}
-
       {showParcelaForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="max-w-md w-full">
             <ParcelaForm
-              parcelaParaEditar={editingParcela}
-              onSubmit={editingParcela ? handleUpdateParcela : handleCreateParcela}
-              onCancel={() => {
-                setShowParcelaForm(false)
-                setEditingParcela(null)
-              }}
+              parcelaParaEditar={editParcela}
+              onSubmit={editParcela ? handleUpdateParcela : handleCreateParcela}
+              onCancel={() => { setShowParcelaForm(false); setEditParcela(null) }}
+            />
+          </div>
+        </div>
+      )}
+      {showMoverForm && selectedAnimal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-md w-full">
+            <MoverAnimalForm
+              animal={selectedAnimal} parcelas={parcelas}
+              onSubmit={handleMoverAnimal}
+              onCancel={() => { setShowMoverForm(false); setSelectedAnimal(null) }}
             />
           </div>
         </div>
       )}
 
-      {showMoverForm && selectedAnimal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="max-w-md w-full">
-            <MoverAnimalForm
-              animal={selectedAnimal}
-              parcelas={parcelas}
-              onSubmit={handleMoverAnimal}
-              onCancel={() => {
-                setShowMoverForm(false)
-                setSelectedAnimal(null)
-              }}
-            />
-          </div>
-        </div>
-      )}
-    </div>
+      <ConfirmDialog open={!!confirmAnimalId} onClose={() => setConfirmAnimalId(null)} onConfirm={handleDeleteAnimal}
+        title="¿Eliminar animal?" message={`¿Eliminar a "${confirmName}"? Esta acción no se puede deshacer.`} />
+      <ConfirmDialog open={!!confirmParcelaId} onClose={() => setConfirmParcelaId(null)} onConfirm={handleDeleteParcela}
+        title="¿Eliminar parcela?" message={`¿Eliminar la parcela "${confirmName}"? Esta acción no se puede deshacer.`} />
+      <ConfirmDialog open={!!confirmSacarId} onClose={() => setConfirmSacarId(null)} onConfirm={handleSacarAnimal}
+        title="¿Retirar animal de la parcela?" message="El animal saldrá de la parcela con fecha de hoy." />
+    </Box>
   )
 }

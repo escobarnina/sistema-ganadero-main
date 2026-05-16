@@ -1,259 +1,258 @@
-// frontend/src/pages/SanidadPage.jsx
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useSanidad } from '../hooks/useSanidad'
-import TratamientoForm from '../components/TratamientoForm'
+import LoadingSpinner      from '../components/LoadingSpinner'
+import TratamientoForm     from '../components/TratamientoForm'
 import DesparasitacionForm from '../components/DesparasitacionForm'
-import DiagnosticoForm from '../components/DiagnosticoForm'
-import ObservacionForm from '../components/ObservacionForm'
 
-const SanidadPage = () => {
+import {
+  Box, Paper, Table, TableHead, TableBody, TableRow, TableCell,
+  Typography, Tabs, Tab, Chip, Card, CardContent, Grid,
+} from '@mui/material'
+import HealthAndSafetyOutlinedIcon  from '@mui/icons-material/HealthAndSafetyOutlined'
+import MedicalServicesOutlinedIcon  from '@mui/icons-material/MedicalServicesOutlined'
+import BugReportOutlinedIcon        from '@mui/icons-material/BugReportOutlined'
+import AssignmentOutlinedIcon       from '@mui/icons-material/AssignmentOutlined'
+import NoteOutlinedIcon             from '@mui/icons-material/NoteOutlined'
+import AddCircleOutlinedIcon        from '@mui/icons-material/AddCircleOutlined'
+
+const KPI = ({ label, value, sub, accent }) => (
+  <Card elevation={0} sx={{ border: '1px solid #E2E8F0', borderLeft: `4px solid ${accent}`, borderRadius: 2 }}>
+    <CardContent sx={{ p: '16px !important' }}>
+      <Typography variant="caption" color="text.secondary">{label}</Typography>
+      <Typography variant="h5" fontWeight={700} sx={{ color: accent, lineHeight: 1.2 }}>{value}</Typography>
+      {sub && <Typography variant="caption" color="text.secondary">{sub}</Typography>}
+    </CardContent>
+  </Card>
+)
+
+export default function SanidadPage() {
   const { tratamientos, tratamientosActivos, desparasitaciones, diagnosticos, observaciones, loading } = useSanidad()
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [tabIdx, setTabIdx] = useState(0)
 
-  const tabs = [
-    { id: 'dashboard', label: '📊 Dashboard' },
-    { id: 'tratamientos', label: '🩺 Tratamientos', count: tratamientos.length },
-    { id: 'desparasitaciones', label: '🪱 Desparasitaciones', count: desparasitaciones.length },
-    { id: 'diagnosticos', label: '📋 Diagnósticos', count: diagnosticos.length },
-    { id: 'observaciones', label: '📝 Observaciones', count: observaciones.length },
-    { id: 'nuevo_tratamiento', label: '+ Tratamiento' },
-    { id: 'nueva_desparasitacion', label: '+ Desparasitación' },
+  const TABS = [
+    { label: 'Dashboard',       Icon: HealthAndSafetyOutlinedIcon },
+    { label: 'Tratamientos',    Icon: MedicalServicesOutlinedIcon,  count: tratamientos.length },
+    { label: 'Desparasitaciones', Icon: BugReportOutlinedIcon,       count: desparasitaciones.length },
+    { label: 'Diagnósticos',    Icon: AssignmentOutlinedIcon,        count: diagnosticos.length },
+    { label: 'Observaciones',   Icon: NoteOutlinedIcon,              count: observaciones.length },
+    { label: '+ Tratamiento',   Icon: AddCircleOutlinedIcon },
+    { label: '+ Desparasitación', Icon: AddCircleOutlinedIcon },
   ]
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-      </div>
-    )
-  }
+  if (loading) return <LoadingSpinner />
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-orange-800">🏥 Módulo de Sanidad</h1>
-        <p className="text-gray-600">Gestión de tratamientos, desparasitaciones, diagnósticos y observaciones</p>
-      </div>
+    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      {/* Header */}
+      <Box>
+        <Typography variant="h5" fontWeight={700} color="text.primary">Módulo de Sanidad</Typography>
+        <Typography variant="body2" color="text.secondary">Tratamientos, desparasitaciones, diagnósticos y observaciones</Typography>
+      </Box>
 
-      {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
-          <div className="text-sm text-gray-500">Activos</div>
-          <div className="text-2xl font-bold text-orange-700">{tratamientosActivos.length}</div>
-          <div className="text-xs text-gray-400">Tratamientos activos</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
-          <div className="text-sm text-gray-500">Registrados</div>
-          <div className="text-2xl font-bold text-green-700">{desparasitaciones.length}</div>
-          <div className="text-xs text-gray-400">Desparasitaciones</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
-          <div className="text-sm text-gray-500">Registrados</div>
-          <div className="text-2xl font-bold text-purple-700">{diagnosticos.length}</div>
-          <div className="text-xs text-gray-400">Diagnósticos</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-teal-500">
-          <div className="text-sm text-gray-500">Registradas</div>
-          <div className="text-2xl font-bold text-teal-700">{observaciones.length}</div>
-          <div className="text-xs text-gray-400">Observaciones</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-          <div className="text-sm text-gray-500">Totales</div>
-          <div className="text-2xl font-bold text-blue-700">{tratamientos.length}</div>
-          <div className="text-xs text-gray-400">Tratamientos totales</div>
-        </div>
-      </div>
+      {/* KPIs */}
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <KPI label="Tratamientos activos" value={tratamientosActivos.length} accent="#E65100" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <KPI label="Desparasitaciones" value={desparasitaciones.length} accent="#2E7D32" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <KPI label="Diagnósticos" value={diagnosticos.length} accent="#6A1B9A" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <KPI label="Observaciones" value={observaciones.length} accent="#00695C" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <KPI label="Tratamientos totales" value={tratamientos.length} accent="#1565C0" />
+        </Grid>
+      </Grid>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
-        <nav className="flex space-x-4">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'border-b-2 border-orange-500 text-orange-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label} {tab.count !== undefined && `(${tab.count})`}
-            </button>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={tabIdx} onChange={(_, v) => setTabIdx(v)} variant="scrollable" scrollButtons="auto">
+          {TABS.map(({ label, Icon, count }) => (
+            <Tab
+              key={label}
+              icon={<Icon sx={{ fontSize: 17 }} />}
+              iconPosition="start"
+              label={count !== undefined ? `${label} (${count})` : label}
+              sx={{ minHeight: 48, textTransform: 'none', fontWeight: 500, fontSize: 13 }}
+            />
           ))}
-        </nav>
-      </div>
+        </Tabs>
+      </Box>
 
-      {/* Content */}
-      <div>
-        {activeTab === 'dashboard' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Tratamientos Activos */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="bg-orange-600 text-white px-4 py-3">
-                <h3 className="font-bold">🩺 Tratamientos Activos</h3>
-              </div>
-              <div className="p-4">
+      {/* Dashboard */}
+      {tabIdx === 0 && (
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 2, overflow: 'hidden' }}>
+              <Box sx={{ bgcolor: '#E65100', color: '#fff', px: 2, py: 1.5 }}>
+                <Typography variant="subtitle2" fontWeight={700}>Tratamientos Activos</Typography>
+              </Box>
+              <Box sx={{ p: 2 }}>
                 {tratamientosActivos.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No hay tratamientos activos</p>
+                  <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>No hay tratamientos activos</Typography>
                 ) : (
-                  <div className="space-y-3">
-                    {tratamientosActivos.map(t => (
-                      <div key={t.id} className="border rounded-lg p-3">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-bold">{t.animal?.nroArete}</p>
-                            <p className="text-sm text-gray-600">{t.diagnostico?.substring(0, 50)}...</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm">Inicio: {new Date(t.fecha).toLocaleDateString()}</p>
-                            <p className="text-xs text-orange-600">Activo</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  tratamientosActivos.map(t => (
+                    <Box key={t.id} sx={{ border: '1px solid #E2E8F0', borderRadius: 2, p: 1.5, mb: 1, display: 'flex', justifyContent: 'space-between' }}>
+                      <Box>
+                        <Typography variant="body2" fontWeight={700}>{t.animal?.nroArete}</Typography>
+                        <Typography variant="caption" color="text.secondary">{t.diagnostico?.substring(0, 50)}…</Typography>
+                      </Box>
+                      <Box textAlign="right">
+                        <Typography variant="caption" color="text.secondary">{new Date(t.fecha).toLocaleDateString('es-PY')}</Typography>
+                        <Chip size="small" label="Activo" sx={{ display: 'block', mt: 0.5, bgcolor: '#FEF3C7', color: '#92400E', fontWeight: 500 }} />
+                      </Box>
+                    </Box>
+                  ))
                 )}
-              </div>
-            </div>
-
-            {/* Últimos Diagnósticos */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="bg-purple-600 text-white px-4 py-3">
-                <h3 className="font-bold">📋 Últimos Diagnósticos</h3>
-              </div>
-              <div className="p-4">
+              </Box>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 2, overflow: 'hidden' }}>
+              <Box sx={{ bgcolor: '#6A1B9A', color: '#fff', px: 2, py: 1.5 }}>
+                <Typography variant="subtitle2" fontWeight={700}>Últimos Diagnósticos</Typography>
+              </Box>
+              <Box sx={{ p: 2 }}>
                 {diagnosticos.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No hay diagnósticos registrados</p>
+                  <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>No hay diagnósticos</Typography>
                 ) : (
-                  <div className="space-y-3">
-                    {diagnosticos.slice(0, 5).map(d => (
-                      <div key={d.id} className="border-b pb-2">
-                        <div className="flex justify-between">
-                          <span className="font-medium">{d.animal?.nroArete}</span>
-                          <span className="text-sm text-gray-500">{new Date(d.fecha).toLocaleDateString()}</span>
-                        </div>
-                        <p className="text-sm text-gray-600">{d.descripcion?.substring(0, 80)}...</p>
-                      </div>
-                    ))}
-                  </div>
+                  diagnosticos.slice(0, 5).map(d => (
+                    <Box key={d.id} sx={{ borderBottom: '1px solid #F1F5F9', pb: 1, mb: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" fontWeight={600}>{d.animal?.nroArete}</Typography>
+                        <Typography variant="caption" color="text.secondary">{new Date(d.fecha).toLocaleDateString('es-PY')}</Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">{d.descripcion?.substring(0, 80)}…</Typography>
+                    </Box>
+                  ))
                 )}
-              </div>
-            </div>
-          </div>
-        )}
+              </Box>
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
 
-        {activeTab === 'tratamientos' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Animal</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Diagnóstico</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+      {/* Tratamientos */}
+      {tabIdx === 1 && (
+        <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Animal</TableCell>
+                  <TableCell>Diagnóstico</TableCell>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Estado</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {tratamientos.map(t => (
-                  <tr key={t.id}>
-                    <td className="px-6 py-4 text-sm">{t.animal?.nroArete}</td>
-                    <td className="px-6 py-4 text-sm">{t.diagnostico?.substring(0, 50)}</td>
-                    <td className="px-6 py-4 text-sm">{new Date(t.fecha).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs ${t.enTratamiento ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
-                        {t.enTratamiento ? '🟡 Activo' : '✅ Completado'}
-                      </span>
-                    </td>
-                  </tr>
+                  <TableRow key={t.id} hover>
+                    <TableCell><Typography variant="body2" fontWeight={600}>{t.animal?.nroArete}</Typography></TableCell>
+                    <TableCell>{t.diagnostico?.substring(0, 50)}</TableCell>
+                    <TableCell>{new Date(t.fecha).toLocaleDateString('es-PY')}</TableCell>
+                    <TableCell>
+                      <Chip size="small" label={t.enTratamiento ? 'Activo' : 'Completado'}
+                        sx={t.enTratamiento
+                          ? { bgcolor: '#FEF3C7', color: '#92400E', fontWeight: 500 }
+                          : { bgcolor: '#DCFCE7', color: '#166534', fontWeight: 500 }} />
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
+      )}
 
-        {activeTab === 'desparasitaciones' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Animal</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Próxima</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+      {/* Desparasitaciones */}
+      {tabIdx === 2 && (
+        <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Animal</TableCell>
+                  <TableCell>Producto</TableCell>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Próxima</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {desparasitaciones.map(d => (
-                  <tr key={d.id}>
-                    <td className="px-6 py-4 text-sm">{d.animal?.nroArete}</td>
-                    <td className="px-6 py-4 text-sm">{d.producto}</td>
-                    <td className="px-6 py-4 text-sm">{new Date(d.fecha).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm">{d.fechaProxima ? new Date(d.fechaProxima).toLocaleDateString() : '-'}</td>
-                  </tr>
+                  <TableRow key={d.id} hover>
+                    <TableCell><Typography variant="body2" fontWeight={600}>{d.animal?.nroArete}</Typography></TableCell>
+                    <TableCell>{d.producto}</TableCell>
+                    <TableCell>{new Date(d.fecha).toLocaleDateString('es-PY')}</TableCell>
+                    <TableCell>{d.fechaProxima ? new Date(d.fechaProxima).toLocaleDateString('es-PY') : '—'}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
+      )}
 
-        {activeTab === 'diagnosticos' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Animal</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Veterinario</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+      {/* Diagnósticos */}
+      {tabIdx === 3 && (
+        <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Animal</TableCell>
+                  <TableCell>Descripción</TableCell>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Veterinario</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {diagnosticos.map(d => (
-                  <tr key={d.id}>
-                    <td className="px-6 py-4 text-sm">{d.animal?.nroArete}</td>
-                    <td className="px-6 py-4 text-sm">{d.descripcion?.substring(0, 60)}</td>
-                    <td className="px-6 py-4 text-sm">{new Date(d.fecha).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm">{d.veterinario?.nombre} {d.veterinario?.apellidos}</td>
-                  </tr>
+                  <TableRow key={d.id} hover>
+                    <TableCell><Typography variant="body2" fontWeight={600}>{d.animal?.nroArete}</Typography></TableCell>
+                    <TableCell>{d.descripcion?.substring(0, 60)}</TableCell>
+                    <TableCell>{new Date(d.fecha).toLocaleDateString('es-PY')}</TableCell>
+                    <TableCell>{[d.veterinario?.nombre, d.veterinario?.apellidos].filter(Boolean).join(' ') || '—'}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
+      )}
 
-        {activeTab === 'observaciones' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Animal</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Observación</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
+      {/* Observaciones */}
+      {tabIdx === 4 && (
+        <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Animal</TableCell>
+                  <TableCell>Observación</TableCell>
+                  <TableCell>Fecha</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {observaciones.map(o => (
-                  <tr key={o.id}>
-                    <td className="px-6 py-4 text-sm">{o.animal?.nroArete}</td>
-                    <td className="px-6 py-4 text-sm">{o.descripcion?.substring(0, 80)}</td>
-                    <td className="px-6 py-4 text-sm">{new Date(o.fecha).toLocaleDateString()}</td>
-                  </tr>
+                  <TableRow key={o.id} hover>
+                    <TableCell><Typography variant="body2" fontWeight={600}>{o.animal?.nroArete}</Typography></TableCell>
+                    <TableCell>{o.descripcion?.substring(0, 80)}</TableCell>
+                    <TableCell>{new Date(o.fecha).toLocaleDateString('es-PY')}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
+      )}
 
-        {activeTab === 'nuevo_tratamiento' && (
-          <TratamientoForm onSuccess={() => setActiveTab('tratamientos')} />
-        )}
-
-        {activeTab === 'nueva_desparasitacion' && (
-          <DesparasitacionForm onSuccess={() => setActiveTab('desparasitaciones')} />
-        )}
-      </div>
-    </div>
+      {tabIdx === 5 && <TratamientoForm     onSuccess={() => setTabIdx(1)} />}
+      {tabIdx === 6 && <DesparasitacionForm onSuccess={() => setTabIdx(2)} />}
+    </Box>
   )
 }
-
-export default SanidadPage

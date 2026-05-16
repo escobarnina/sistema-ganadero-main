@@ -1,27 +1,45 @@
-// frontend/src/pages/UnauthorizedPage.jsx
-import React from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { Box, Typography, Button, Paper } from '@mui/material'
+import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined'
 
-const UnauthorizedPage = () => {
+export default function UnauthorizedPage() {
+  const navigate = useNavigate()
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white rounded-lg shadow-xl p-8 max-w-md text-center">
-        <div className="text-6xl mb-4">🚫</div>
-        <h1 className="text-2xl font-bold text-red-600 mb-2">Acceso Denegado</h1>
-        <p className="text-gray-600 mb-6">
-          No tienes permisos suficientes para acceder a esta página.
-        </p>
-        <div className="space-y-3">
-          <Link
-            to="/"
-            className="block w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition"
-          >
-            Volver al Dashboard
-          </Link>
-        </div>
-      </div>
-    </div>
+    <Box sx={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: '100vh', bgcolor: 'background.default', p: 3,
+    }}>
+      <Paper elevation={0} sx={{
+        border: '1px solid #E2E8F0', borderRadius: 4,
+        p: 5, maxWidth: 400, textAlign: 'center',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+      }}>
+        <Box sx={{
+          width: 64, height: 64, borderRadius: 3,
+          bgcolor: '#FEE2E2',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <BlockOutlinedIcon sx={{ fontSize: 32, color: 'error.main' }} />
+        </Box>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: 'error.main', mb: 0.5 }}>
+            Acceso Denegado
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            No tenés permisos suficientes para acceder a esta página. Contactá al administrador si creés que es un error.
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          color="primary"
+          size="small"
+          onClick={() => navigate('/')}
+          fullWidth
+          disableElevation
+        >
+          Volver al Dashboard
+        </Button>
+      </Paper>
+    </Box>
   )
 }
-
-export default UnauthorizedPage

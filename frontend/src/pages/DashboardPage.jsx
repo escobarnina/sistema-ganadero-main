@@ -1,65 +1,62 @@
-// frontend/src/pages/DashboardPage.jsx
 import { useDashboard } from '../hooks/useDashboard'
 import LoadingSpinner from '../components/LoadingSpinner'
-import ErrorMessage from '../components/ErrorMessage'
-import ChartCard from '../components/ChartCard'
-import BarChart from '../components/BarChart'
-import PieChart from '../components/PieChart'
-import LineChart from '../components/LineChart'
+import ErrorMessage   from '../components/ErrorMessage'
+import ChartCard      from '../components/ChartCard'
+import BarChart       from '../components/BarChart'
+import PieChart       from '../components/PieChart'
+import LineChart      from '../components/LineChart'
 
-// ── KPI Card ────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, icon, gradient, textColor }) {
+import {
+  Box, Card, CardContent, Typography, Chip,
+  Table, TableHead, TableBody, TableRow, TableCell, Paper,
+} from '@mui/material'
+import PetsOutlinedIcon                from '@mui/icons-material/PetsOutlined'
+import CheckCircleOutlinedIcon         from '@mui/icons-material/CheckCircleOutlined'
+import MedicalServicesOutlinedIcon     from '@mui/icons-material/MedicalServicesOutlined'
+import VaccinesOutlinedIcon            from '@mui/icons-material/VaccinesOutlined'
+import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined'
+
+const ACCENT = {
+  blue:   '#1565C0',
+  green:  '#2E7D32',
+  purple: '#6A1B9A',
+  orange: '#E65100',
+}
+
+// ── KPI Card ─────────────────────────────────────────────────────────────────
+function KpiCard({ label, value, IconComp, accent }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl p-5 text-white ${gradient}`}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium opacity-80">{label}</p>
-          <p className="text-4xl font-extrabold mt-1 tracking-tight">{value}</p>
-        </div>
-        <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-          {icon}
-        </div>
-      </div>
-      {/* decorative blob */}
-      <div className="absolute -bottom-4 -right-4 w-24 h-24 rounded-full bg-white/10" />
-    </div>
+    <Card elevation={0} sx={{ borderLeft: `4px solid ${accent}` }}>
+      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mb: 0.75 }}>
+              {label}
+            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.1 }}>
+              {value ?? '—'}
+            </Typography>
+          </Box>
+          <Box sx={{
+            width: 46, height: 46, borderRadius: 2, flexShrink: 0,
+            bgcolor: accent + '14',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <IconComp sx={{ fontSize: 22, color: accent }} />
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
   )
 }
 
-// ── SVG icons ────────────────────────────────────────────────────────────────
-const IconCow = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round">
-    <path d="M4 8c0-2.2 1.8-4 4-4s4 1.8 4 4v8H4V8z" /><path d="M12 12h4l3 4h-7v-4z" />
-    <circle cx="7" cy="19" r="1.5" /><circle cx="14" cy="19" r="1.5" />
-  </svg>
-)
-const IconCheck = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-)
-const IconVaccine = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-    <path d="M10 2v4M14 2v4M3 10h18M5 10v10a2 2 0 002 2h10a2 2 0 002-2V10" />
-  </svg>
-)
-const IconSyringe = () => (
-  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-    <line x1="22" y1="2" x2="14" y2="10" /><line x1="17" y1="7" x2="7" y2="17" />
-    <line x1="11" y1="11" x2="9" y2="13" /><path d="M3 21l4-4" /><path d="M9 17l-4 4" />
-  </svg>
-)
-
-// ── Wrapper seguro para gráficos (no renderiza si no hay datos) ───────────────
-function ChartWrapper({ labels = [], children }) {
-  if (!labels || labels.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-        Sin datos disponibles
-      </div>
-    )
-  }
-  return children
+// ── Placeholder vacío ─────────────────────────────────────────────────────────
+function EmptyChart() {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+      <Typography variant="body2" color="text.disabled">Sin datos disponibles</Typography>
+    </Box>
+  )
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -77,101 +74,135 @@ export default function DashboardPage() {
     return <ErrorMessage message={error.message} onRetry={refetchStats} />
 
   const kpis = [
-    { label: 'Total Animales',    value: totalAnimales,     icon: <IconCow />,     gradient: 'bg-gradient-to-br from-blue-500 to-blue-700' },
-    { label: 'Animales Activos',  value: animalesActivos,   icon: <IconCheck />,   gradient: 'bg-gradient-to-br from-green-500 to-green-700' },
-    { label: 'Vacunas Registradas', value: totalVacunas,    icon: <IconVaccine />, gradient: 'bg-gradient-to-br from-purple-500 to-purple-700' },
-    { label: 'Vacunaciones',       value: totalVacunaciones, icon: <IconSyringe />, gradient: 'bg-gradient-to-br from-orange-400 to-orange-600' },
+    { label: 'Total Animales',      value: totalAnimales,     IconComp: PetsOutlinedIcon,            accent: ACCENT.blue   },
+    { label: 'Animales Activos',    value: animalesActivos,   IconComp: CheckCircleOutlinedIcon,     accent: ACCENT.green  },
+    { label: 'Vacunas Registradas', value: totalVacunas,      IconComp: MedicalServicesOutlinedIcon, accent: ACCENT.purple },
+    { label: 'Vacunaciones',        value: totalVacunaciones, IconComp: VaccinesOutlinedIcon,        accent: ACCENT.orange },
   ]
 
+  const has = (obj) => obj?.labels?.length > 0
+
   return (
-    <div className="p-6 space-y-6">
+    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
+
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
         {kpis.map(k => <KpiCard key={k.label} {...k} />)}
-      </div>
+      </Box>
 
       {/* Gráficos fila 1 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2.5 }}>
         <ChartCard title="Vacunaciones por Mes">
-          <ChartWrapper labels={vacunacionesPorMes.labels}>
-            <BarChart labels={vacunacionesPorMes.labels} data={vacunacionesPorMes.values}
-              title="Cantidad" backgroundColor="#f59e0b" />
-          </ChartWrapper>
+          {has(vacunacionesPorMes)
+            ? <BarChart labels={vacunacionesPorMes.labels} data={vacunacionesPorMes.values}
+                title="Cantidad" backgroundColor={ACCENT.orange} />
+            : <EmptyChart />}
         </ChartCard>
         <ChartCard title="Ventas por Mes">
-          <ChartWrapper labels={ventasPorMes.labels}>
-            <LineChart labels={ventasPorMes.labels} data={ventasPorMes.values}
-              title="Monto (Gs.)" color="#10b981" />
-          </ChartWrapper>
+          {has(ventasPorMes)
+            ? <LineChart labels={ventasPorMes.labels} data={ventasPorMes.values}
+                title="Monto (Gs.)" color={ACCENT.green} />
+            : <EmptyChart />}
         </ChartCard>
-      </div>
+      </Box>
 
       {/* Gráficos fila 2 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2.5 }}>
         <ChartCard title="Animales por Categoría">
-          <ChartWrapper labels={animalesPorCategoria.labels}>
-            <PieChart labels={animalesPorCategoria.labels} data={animalesPorCategoria.values} />
-          </ChartWrapper>
+          {has(animalesPorCategoria)
+            ? <PieChart labels={animalesPorCategoria.labels} data={animalesPorCategoria.values} />
+            : <EmptyChart />}
         </ChartCard>
         <ChartCard title="Animales por Sexo">
-          <ChartWrapper labels={animalesPorSexo.labels}>
-            <PieChart labels={animalesPorSexo.labels} data={animalesPorSexo.values}
-              colors={['#3b82f6', '#ec4899']} />
-          </ChartWrapper>
+          {has(animalesPorSexo)
+            ? <PieChart labels={animalesPorSexo.labels} data={animalesPorSexo.values}
+                colors={[ACCENT.blue, '#AD1457']} />
+            : <EmptyChart />}
         </ChartCard>
         <ChartCard title="Vacunas por Vía de Aplicación">
-          <ChartWrapper labels={vacunasPorTipo.labels}>
-            <PieChart labels={vacunasPorTipo.labels} data={vacunasPorTipo.values} />
-          </ChartWrapper>
+          {has(vacunasPorTipo)
+            ? <PieChart labels={vacunasPorTipo.labels} data={vacunasPorTipo.values} />
+            : <EmptyChart />}
         </ChartCard>
-      </div>
+      </Box>
 
       {/* Producción */}
       <ChartCard title="Producción de Leche por Mes">
-        <ChartWrapper labels={produccionPorMes.labels}>
-          <BarChart labels={produccionPorMes.labels} data={produccionPorMes.values}
-            title="Litros" backgroundColor="#8b5cf6" />
-        </ChartWrapper>
+        {has(produccionPorMes)
+          ? <BarChart labels={produccionPorMes.labels} data={produccionPorMes.values}
+              title="Litros" backgroundColor={ACCENT.purple} />
+          : <EmptyChart />}
       </ChartCard>
 
       {/* Próximas vacunaciones */}
       {proximasVacunaciones.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <h2 className="text-sm font-semibold text-gray-800">
-              Próximas Vacunaciones — próximos 30 días ({proximasVacunaciones.length})
-            </h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-                  <th className="px-5 py-3 text-left font-medium">Animal</th>
-                  <th className="px-5 py-3 text-left font-medium">Vacuna</th>
-                  <th className="px-5 py-3 text-left font-medium">Fecha Próxima</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
+        <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+          {/* Header */}
+          <Box sx={{
+            px: 2.5, py: 1.75,
+            borderBottom: '1px solid #E2E8F0',
+            display: 'flex', alignItems: 'center', gap: 1,
+          }}>
+            <NotificationsActiveOutlinedIcon sx={{ fontSize: 18, color: ACCENT.orange }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              Próximas Vacunaciones — próximos 30 días
+            </Typography>
+            <Chip
+              label={proximasVacunaciones.length}
+              size="small"
+              sx={{
+                bgcolor: '#FEF3C7', color: '#92400E',
+                fontWeight: 600, fontSize: '0.7rem', height: 20,
+              }}
+            />
+          </Box>
+
+          {/* Tabla */}
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Animal</TableCell>
+                  <TableCell>Vacuna</TableCell>
+                  <TableCell>Fecha Próxima</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {proximasVacunaciones.map(v => (
-                  <tr key={v.id} className="hover:bg-gray-50 transition">
-                    <td className="px-5 py-3 font-medium text-gray-800">
-                      {v.animal?.nroArete && <span className="text-gray-400 mr-1">#{v.animal.nroArete}</span>}
-                      {v.animal?.nombre}
-                    </td>
-                    <td className="px-5 py-3 text-gray-600">{v.vacuna?.nombre}</td>
-                    <td className="px-5 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                        {new Date(v.fechaProxima).toLocaleDateString('es-PY')}
-                      </span>
-                    </td>
-                  </tr>
+                  <TableRow key={v.id} hover>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        {v.animal?.nroArete && (
+                          <Typography component="span" variant="caption" color="text.disabled">
+                            #{v.animal.nroArete}
+                          </Typography>
+                        )}
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {v.animal?.nombre}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">{v.vacuna?.nombre}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={new Date(v.fechaProxima).toLocaleDateString('es-PY')}
+                        size="small"
+                        sx={{
+                          bgcolor: '#FEF3C7', color: '#92400E',
+                          border: '1px solid #FDE68A',
+                          fontWeight: 500, fontSize: '0.72rem',
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
       )}
-    </div>
+    </Box>
   )
 }

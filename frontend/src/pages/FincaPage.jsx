@@ -1,182 +1,162 @@
-// frontend/src/pages/FincaPage.jsx
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useFincas } from '../hooks/useFincas'
-import FincaForm from '../components/FincaForm'
 import LoadingSpinner from '../components/LoadingSpinner'
-import ErrorMessage from '../components/ErrorMessage'
+import ErrorMessage   from '../components/ErrorMessage'
+import FincaForm      from '../components/FincaForm'
+import PageHeader     from '../components/ui/PageHeader'
+import PageAlert      from '../components/ui/PageAlert'
+import ConfirmDialog  from '../components/ui/ConfirmDialog'
+import StatusChip     from '../components/ui/StatusChip'
+import EmptyState     from '../components/ui/EmptyState'
 
-const FincaPage = () => {
+import {
+  Box, Paper, Table, TableHead, TableBody, TableRow, TableCell,
+  Typography, Alert, IconButton, Tooltip,
+} from '@mui/material'
+import HomeWorkOutlinedIcon from '@mui/icons-material/HomeWorkOutlined'
+import EditOutlinedIcon     from '@mui/icons-material/EditOutlined'
+import DeleteOutlinedIcon   from '@mui/icons-material/DeleteOutlined'
+
+export default function FincaPage() {
   const { fincas, fincaActual, loading, error, crearFinca, actualizarFinca, eliminarFinca } = useFincas()
-  const [showForm, setShowForm] = useState(false)
-  const [editingFinca, setEditingFinca] = useState(null)
-  const [message, setMessage] = useState(null)
+  const [showForm, setShowForm]     = useState(false)
+  const [editing, setEditing]       = useState(null)
+  const [message, setMessage]       = useState(null)
+  const [confirmId, setConfirmId]   = useState(null)
+  const [confirmNombre, setConfirmNombre] = useState('')
 
-  if (loading) {
-    return <LoadingSpinner />
-  }
-
-  if (error) {
-    return <ErrorMessage message={error.message} />
+  const notify = (r) => {
+    setMessage({ type: r.success ? 'success' : 'error', text: r.message || (r.success ? 'Operación exitosa' : 'Error') })
+    setTimeout(() => setMessage(null), 3500)
   }
 
   const handleCreate = async (data) => {
-    const result = await crearFinca(data)
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    if (result.success) {
-      setShowForm(false)
-    }
-    setTimeout(() => {
-      setMessage(null)
-    }, 3000)
+    const r = await crearFinca(data)
+    notify(r)
+    if (r.success) closeForm()
   }
 
   const handleUpdate = async (data) => {
-    const result = await actualizarFinca(editingFinca.id, data)
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    if (result.success) {
-      setShowForm(false)
-      setEditingFinca(null)
-    }
-    setTimeout(() => {
-      setMessage(null)
-    }, 3000)
+    const r = await actualizarFinca(editing.id, data)
+    notify(r)
+    if (r.success) closeForm()
   }
 
-  const handleDelete = async (id, nombre) => {
-    if (window.confirm(`¿Eliminar la finca "${nombre}"?`)) {
-      const result = await eliminarFinca(id)
-      setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-      setTimeout(() => {
-        setMessage(null)
-      }, 3000)
-    }
+  const handleDelete = async () => {
+    const r = await eliminarFinca(confirmId)
+    notify(r)
+    setConfirmId(null)
   }
 
-  const openCreateForm = () => {
-    setEditingFinca(null)
-    setShowForm(true)
-  }
+  const openEdit  = (f) => { setEditing(f); setShowForm(true) }
+  const openAdd   = () => { setEditing(null); setShowForm(true) }
+  const closeForm = () => { setShowForm(false); setEditing(null) }
 
-  const openEditForm = (finca) => {
-    setEditingFinca(finca)
-    setShowForm(true)
-  }
-
-  const closeForm = () => {
-    setShowForm(false)
-    setEditingFinca(null)
-  }
+  if (loading) return <LoadingSpinner />
+  if (error)   return <ErrorMessage message={error.message} />
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">📍 Gestión de Fincas</h1>
-        <button
-          onClick={openCreateForm}
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
-        >
-          + Nueva Finca
-        </button>
-      </div>
+    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      <PageHeader
+        title="Gestión de Finca"
+        icon={HomeWorkOutlinedIcon}
+        onAdd={openAdd}
+        addLabel="Nueva Finca"
+      />
 
-      {message && (
-        <div className={`mb-4 p-3 rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {message.text}
-        </div>
-      )}
+      <PageAlert message={message} onClose={() => setMessage(null)} />
 
-      {/* Finca Actual */}
+      {/* Finca actual destacada */}
       {fincaActual && (
-        <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-lg font-bold text-blue-800">🏠 Finca Actual</h2>
-              <p className="text-blue-600 font-medium">{fincaActual.nombre}</p>
-              {fincaActual.propietario && (
-                <p className="text-sm text-blue-500">Propietario: {fincaActual.propietario}</p>
-              )}
-            </div>
-            <button
-              onClick={() => openEditForm(fincaActual)}
-              className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
-            >
-              ✏️ Editar
-            </button>
-          </div>
-        </div>
+        <Alert
+          severity="info"
+          action={
+            <Tooltip title="Editar finca actual">
+              <IconButton size="small" color="info" onClick={() => openEdit(fincaActual)}>
+                <EditOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          }
+          sx={{ borderRadius: 2 }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            Finca activa: {fincaActual.nombre}
+          </Typography>
+          {fincaActual.propietario && (
+            <Typography variant="caption" color="text.secondary">
+              Propietario: {fincaActual.propietario}
+            </Typography>
+          )}
+        </Alert>
       )}
 
-      {/* Lista de Fincas */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Propietario</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ubicación</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {fincas.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
-                  No hay fincas registradas
-                </td>
-              </tr>
-            ) : (
-              fincas.map((finca) => (
-                <tr key={finca.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium">{finca.nombre}</td>
-                  <td className="px-6 py-4 text-sm">{finca.propietario || '-'}</td>
-                  <td className="px-6 py-4 text-sm">
-                    {finca.municipio ? `${finca.municipio}${finca.departamento ? `, ${finca.departamento}` : ''}` : '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm">{finca.telefono || '-'}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs ${finca.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {finca.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center space-x-2">
-                    <button
-                      onClick={() => openEditForm(finca)}
-                      className="text-yellow-600 hover:text-yellow-800"
-                      title="Editar"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDelete(finca.id, finca.nombre)}
-                      className="text-red-600 hover:text-red-800"
-                      title="Eliminar"
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {fincas.length === 0 ? (
+        <EmptyState
+          icon={HomeWorkOutlinedIcon}
+          title="No hay fincas registradas"
+          description="Registrá la finca para comenzar a gestionar el sistema."
+          onAction={openAdd}
+          actionLabel="Registrar finca"
+        />
+      ) : (
+        <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Nombre</TableCell>
+                  <TableCell>Propietario</TableCell>
+                  <TableCell>Ubicación</TableCell>
+                  <TableCell>Teléfono</TableCell>
+                  <TableCell>Estado</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {fincas.map((f) => (
+                  <TableRow key={f.id} hover>
+                    <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>{f.nombre}</Typography></TableCell>
+                    <TableCell>{f.propietario || '—'}</TableCell>
+                    <TableCell>
+                      {[f.municipio, f.departamento].filter(Boolean).join(', ') || '—'}
+                    </TableCell>
+                    <TableCell>{f.telefono || '—'}</TableCell>
+                    <TableCell><StatusChip value={f.activo} /></TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Editar">
+                        <IconButton size="small" color="warning" onClick={() => openEdit(f)}>
+                          <EditOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton size="small" color="error" onClick={() => { setConfirmId(f.id); setConfirmNombre(f.nombre) }}>
+                          <DeleteOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
+      )}
 
-      {/* Modal Formulario */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="max-w-md w-full">
-            <FincaForm
-              fincaParaEditar={editingFinca}
-              onSubmit={editingFinca ? handleUpdate : handleCreate}
-              onCancel={closeForm}
-            />
-          </div>
-        </div>
+        <FincaForm
+          fincaParaEditar={editing}
+          onSubmit={editing ? handleUpdate : handleCreate}
+          onCancel={closeForm}
+        />
       )}
-    </div>
+
+      <ConfirmDialog
+        open={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={handleDelete}
+        title="¿Eliminar finca?"
+        message={`¿Estás seguro de eliminar la finca "${confirmNombre}"? Esta acción no se puede deshacer.`}
+      />
+    </Box>
   )
 }
-
-export default FincaPage

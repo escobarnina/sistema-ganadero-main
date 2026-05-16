@@ -1,48 +1,36 @@
-// frontend/src/components/Layout.jsx
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLayout } from '../context/LayoutContext'
 import Sidebar from './Sidebar'
+import {
+  AppBar, Toolbar, Box, Typography, IconButton,
+  Chip, Avatar, Button, Divider,
+} from '@mui/material'
+import MenuOpenIcon from '@mui/icons-material/MenuOpen'
+import MenuIcon     from '@mui/icons-material/Menu'
+import LogoutIcon   from '@mui/icons-material/Logout'
 
-// Mapa de rutas → títulos de página
 const PAGE_TITLES = {
-  '/':            'Dashboard',
-  '/dashboard':   'Dashboard',
-  '/animales':    'Animales',
-  '/vacunas':     'Vacunas',
-  '/vacunaciones':'Vacunaciones',
-  '/reproduccion':'Reproducción',
-  '/produccion':  'Producción',
-  '/sanidad':     'Sanidad',
-  '/bajas':       'Bajas y Muertes',
-  '/compras':     'Compras',
-  '/ventas':      'Ventas',
-  '/clientes':    'Clientes',
-  '/proveedores': 'Proveedores',
-  '/alertas':     'Alertas',
-  '/rrhh':        'Recursos Humanos',
-  '/usuarios':    'Gestión de Usuarios',
-  '/roles':       'Roles y Permisos',
-  '/catalogos':   'Catálogos',
-  '/fincas':      'Gestión de Finca',
-  '/unauthorized':'Acceso Denegado',
-}
-
-// Icono de menú / hamburguesa
-function MenuIcon({ open }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      {open ? (
-        <path d="M6 18L18 6M6 6l12 12" />
-      ) : (
-        <>
-          <line x1="3" y1="6"  x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </>
-      )}
-    </svg>
-  )
+  '/':             'Dashboard',
+  '/dashboard':    'Dashboard',
+  '/animales':     'Animales',
+  '/vacunas':      'Vacunas',
+  '/vacunaciones': 'Vacunaciones',
+  '/reproduccion': 'Reproducción',
+  '/produccion':   'Producción',
+  '/sanidad':      'Sanidad',
+  '/bajas':        'Bajas y Muertes',
+  '/compras':      'Compras',
+  '/ventas':       'Ventas',
+  '/clientes':     'Clientes',
+  '/proveedores':  'Proveedores',
+  '/alertas':      'Alertas',
+  '/rrhh':         'Recursos Humanos',
+  '/usuarios':     'Gestión de Usuarios',
+  '/roles':        'Roles y Permisos',
+  '/catalogos':    'Catálogos',
+  '/fincas':       'Gestión de Finca',
+  '/unauthorized': 'Acceso Denegado',
 }
 
 export default function Layout({ children }) {
@@ -51,8 +39,7 @@ export default function Layout({ children }) {
   const location = useLocation()
   const navigate  = useNavigate()
 
-  const pageTitle  = PAGE_TITLES[location.pathname] ?? 'Sistema Ganadero'
-  const sidebarW   = sidebarOpen ? 240 : 68
+  const pageTitle = PAGE_TITLES[location.pathname] ?? 'Sistema Ganadero'
 
   const handleLogout = async () => {
     await logout()
@@ -67,72 +54,101 @@ export default function Layout({ children }) {
     .slice(0, 2)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
       <Sidebar />
 
-      {/* Área principal */}
-      <div
-        className="flex flex-col flex-1 overflow-hidden transition-all duration-300"
-        style={{ marginLeft: sidebarW }}
-      >
-        {/* ── Header superior ─────────────────────────────── */}
-        <header
-          className="flex-shrink-0 flex items-center justify-between px-5 bg-white border-b border-gray-200 z-20"
-          style={{ height: 56 }}
-        >
-          {/* Izquierda: toggle + título */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition"
-              title={sidebarOpen ? 'Colapsar menú' : 'Expandir menú'}
-            >
-              <MenuIcon open={sidebarOpen} />
-            </button>
-            <h1 className="text-base font-semibold text-gray-800 truncate">
-              {pageTitle}
-            </h1>
-          </div>
+      <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        {/* ── AppBar ───────────────────────────────── */}
+        <AppBar position="static" sx={{ zIndex: 20 }}>
+          <Toolbar variant="dense" sx={{ minHeight: 56, px: { xs: 2, sm: 2.5 } }}>
 
-          {/* Derecha: usuario + logout */}
-          <div className="flex items-center gap-3">
-            {/* Badge de rol */}
+            {/* Izquierda: toggle + título */}
+            <IconButton
+              size="small"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              title={sidebarOpen ? 'Colapsar menú' : 'Expandir menú'}
+              sx={{ mr: 1.5, color: 'text.secondary' }}
+            >
+              {sidebarOpen ? <MenuOpenIcon fontSize="small" /> : <MenuIcon fontSize="small" />}
+            </IconButton>
+
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, color: 'text.primary', flexGrow: 1, fontSize: '0.9375rem' }}
+            >
+              {pageTitle}
+            </Typography>
+
+            {/* Derecha: rol + usuario + logout */}
             {user?.rol?.nombre && (
-              <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-green-50 text-green-700 border border-green-200">
-                {user.rol.nombre}
-              </span>
+              <Chip
+                label={user.rol.nombre}
+                size="small"
+                sx={{
+                  mr: 1.5,
+                  display: { xs: 'none', sm: 'flex' },
+                  bgcolor: '#DCFCE7',
+                  color: '#166534',
+                  border: '1px solid #BBF7D0',
+                  fontWeight: 600,
+                  fontSize: '0.6875rem',
+                }}
+              />
             )}
 
-            {/* Avatar + nombre */}
-            <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 select-none">
+            <Divider orientation="vertical" flexItem sx={{ mx: 1.5, borderColor: 'divider' }} />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Avatar
+                sx={{
+                  width: 32, height: 32,
+                  background: 'linear-gradient(135deg, #2E7D32, #1B5E20)',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                }}
+              >
                 {initials}
-              </div>
-              <span className="hidden md:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
+              </Avatar>
+              <Typography
+                variant="body2"
+                sx={{
+                  display: { xs: 'none', md: 'block' },
+                  fontWeight: 500,
+                  color: 'text.primary',
+                  maxWidth: 140,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {nombreCompleto || user?.username}
-              </span>
-            </div>
+              </Typography>
+            </Box>
 
-            {/* Cerrar sesión */}
-            <button
+            <Button
+              size="small"
+              startIcon={<LogoutIcon sx={{ fontSize: '1rem !important' }} />}
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition font-medium"
-              title="Cerrar sesión"
+              sx={{
+                ml: 1.5,
+                color: 'error.main',
+                fontSize: '0.8125rem',
+                px: 1.25,
+                '&:hover': { bgcolor: '#FEE2E2' },
+              }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
-              </svg>
-              <span className="hidden sm:inline">Salir</span>
-            </button>
-          </div>
-        </header>
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                Salir
+              </Box>
+            </Button>
+          </Toolbar>
+        </AppBar>
 
-        {/* ── Contenido scrolleable ────────────────────────── */}
-        <main className="flex-1 overflow-y-auto">
+        {/* ── Contenido ────────────────────────────── */}
+        <Box component="main" sx={{ flex: 1, overflowY: 'auto' }}>
           {children}
-        </main>
-      </div>
-    </div>
+        </Box>
+      </Box>
+    </Box>
   )
 }
