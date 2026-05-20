@@ -1,32 +1,42 @@
-export default function DashboardCard({ title, value, icon, color, trend }) {
-  const colors = {
-    blue: 'bg-blue-500',
-    green: 'bg-green-500',
-    yellow: 'bg-yellow-500',
-    red: 'bg-red-500',
-    purple: 'bg-purple-500',
-    indigo: 'bg-indigo-500',
-    pink: 'bg-pink-500',
-  }
+import { Card, CardContent, Box, Typography } from '@mui/material'
+import TrendingUpIcon   from '@mui/icons-material/TrendingUp'
+import TrendingDownIcon from '@mui/icons-material/TrendingDown'
 
-  const bgColor = colors[color] || colors.blue
-
+export default function DashboardCard({ title, value, icon: IconComp, accent = '#2E7D32', trend }) {
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-500 text-sm font-medium mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-800">{value}</p>
-          {trend && (
-            <p className={`text-xs mt-2 ${trend > 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}% vs mes anterior
-            </p>
+    <Card elevation={0} sx={{ borderLeft: `4px solid ${accent}` }}>
+      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mb: 0.75 }}>
+              {title}
+            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.1 }}>
+              {value ?? '—'}
+            </Typography>
+            {trend != null && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                {trend > 0
+                  ? <TrendingUpIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                  : <TrendingDownIcon sx={{ fontSize: 14, color: 'error.main' }} />
+                }
+                <Typography variant="caption" sx={{ color: trend > 0 ? 'success.main' : 'error.main', fontWeight: 500 }}>
+                  {Math.abs(trend)}% vs mes anterior
+                </Typography>
+              </Box>
+            )}
+          </Box>
+          {IconComp && (
+            <Box sx={{
+              width: 44, height: 44, borderRadius: 2, flexShrink: 0,
+              bgcolor: accent + '18',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <IconComp sx={{ fontSize: 22, color: accent }} />
+            </Box>
           )}
-        </div>
-        <div className={`${bgColor} rounded-full p-3 text-white text-xl`}>
-          {icon}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </CardContent>
+    </Card>
   )
 }

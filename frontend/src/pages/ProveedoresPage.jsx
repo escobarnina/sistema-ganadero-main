@@ -3,157 +3,134 @@ import { useProveedores } from '../hooks/useProveedores'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorMessage from '../components/ErrorMessage'
 import ProveedorForm from '../components/ProveedorForm'
+import PageHeader from '../components/ui/PageHeader'
+import PageAlert from '../components/ui/PageAlert'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
+import EmptyState from '../components/ui/EmptyState'
+
+import {
+  Box, Paper, Table, TableHead, TableBody, TableRow, TableCell,
+  Typography, IconButton, Tooltip,
+} from '@mui/material'
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 
 export default function ProveedoresPage() {
   const { proveedores, loading, error, crearProveedor, actualizarProveedor, eliminarProveedor } = useProveedores()
   const [showForm, setShowForm] = useState(false)
-  const [editingProveedor, setEditingProveedor] = useState(null)
+  const [editing, setEditing] = useState(null)
   const [message, setMessage] = useState(null)
-  const [showConfirm, setShowConfirm] = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
 
-  const handleCreate = async (data) => {
-    const result = await crearProveedor(data)
+  const notify = (result) => {
     setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    if (result.success) setShowForm(false)
-    setTimeout(() => setMessage(null), 3000)
+    setTimeout(() => setMessage(null), 3500)
   }
 
-  const handleEdit = (proveedor) => {
-    setEditingProveedor(proveedor)
-    setShowForm(true)
+  const handleCreate = async (data) => {
+    const r = await crearProveedor(data)
+    notify(r)
+    if (r.success) closeForm()
   }
 
   const handleUpdate = async (data) => {
-    const result = await actualizarProveedor(editingProveedor.id, data)
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    if (result.success) {
-      setShowForm(false)
-      setEditingProveedor(null)
-    }
-    setTimeout(() => setMessage(null), 3000)
+    const r = await actualizarProveedor(editing.id, data)
+    notify(r)
+    if (r.success) closeForm()
   }
 
-  const handleDelete = async (id) => {
-    const result = await eliminarProveedor(id)
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message })
-    setShowConfirm(null)
-    setTimeout(() => setMessage(null), 3000)
+  const handleDelete = async () => {
+    const r = await eliminarProveedor(confirmId)
+    notify(r)
+    setConfirmId(null)
   }
+
+  const openAdd = () => { setEditing(null); setShowForm(true) }
+  const openEdit = (p) => { setEditing(p); setShowForm(true) }
+  const closeForm = () => { setShowForm(false); setEditing(null) }
 
   if (loading) return <LoadingSpinner />
   if (error) return <ErrorMessage message={error.message} />
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">🏢 Proveedores</h1>
-        <button
-          onClick={() => {
-            setEditingProveedor(null)
-            setShowForm(true)
-          }}
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
-        >
-          + Nuevo Proveedor
-        </button>
-      </div>
+    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      <PageHeader
+        title="Proveedores"
+        icon={LocalShippingOutlinedIcon}
+        onAdd={openAdd}
+        addLabel="Nuevo Proveedor"
+      />
 
-      {message && (
-        <div className={`mb-4 p-3 rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {message.text}
-        </div>
-      )}
+      <PageAlert message={message} onClose={() => setMessage(null)} />
 
       {proveedores.length === 0 ? (
-        <div className="text-center py-20 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">No hay proveedores registrados</p>
-          <button
-            onClick={() => {
-              setEditingProveedor(null)
-              setShowForm(true)
-            }}
-            className="mt-4 text-green-600 hover:text-green-700"
-          >
-            + Crear el primer proveedor
-          </button>
-        </div>
+        <EmptyState
+          icon={LocalShippingOutlinedIcon}
+          title="No hay proveedores registrados"
+          description="Registrá el primer proveedor para comenzar a gestionar compras."
+          onAction={openAdd}
+          actionLabel="Crear primer proveedor"
+        />
       ) : (
-        <div className="overflow-x-auto bg-white rounded-lg shadow">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Apellidos</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Teléfono</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Dirección</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">NIT/CI</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {proveedores.map((proveedor) => (
-                <tr key={proveedor.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{proveedor.nombre}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{proveedor.apellidos || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{proveedor.telefono || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{proveedor.direccion || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{proveedor.nit || proveedor.ci || '-'}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEdit(proveedor)}
-                        className="text-yellow-600 hover:text-yellow-800 transition"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => setShowConfirm(proveedor.id)}
-                        className="text-red-600 hover:text-red-800 transition"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                   </td>
-                 </tr>
-              ))}
-            </tbody>
-           </table>
-        </div>
+        <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Nombre</TableCell>
+                  <TableCell>Apellidos</TableCell>
+                  <TableCell>Teléfono</TableCell>
+                  <TableCell>Dirección</TableCell>
+                  <TableCell>NIT / CI</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {proveedores.map((p) => (
+                  <TableRow key={p.id} hover>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{p.nombre}</Typography>
+                    </TableCell>
+                    <TableCell><Typography variant="body2" color="text.secondary">{p.apellidos || '—'}</Typography></TableCell>
+                    <TableCell>{p.telefono || '—'}</TableCell>
+                    <TableCell>{p.direccion || '—'}</TableCell>
+                    <TableCell>{p.nit || p.ci || '—'}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Editar">
+                        <IconButton size="small" color="warning" onClick={() => openEdit(p)}>
+                          <EditOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton size="small" color="error" onClick={() => setConfirmId(p.id)}>
+                          <DeleteOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
       )}
 
       {showForm && (
         <ProveedorForm
-          proveedor={editingProveedor}
-          onSubmit={editingProveedor ? handleUpdate : handleCreate}
-          onCancel={() => {
-            setShowForm(false)
-            setEditingProveedor(null)
-          }}
+          proveedor={editing}
+          onSubmit={editing ? handleUpdate : handleCreate}
+          onCancel={closeForm}
         />
       )}
 
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-bold mb-4">¿Eliminar proveedor?</h3>
-            <p className="text-gray-600 mb-6">Esta acción no se puede deshacer.</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleDelete(showConfirm)}
-                className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700"
-              >
-                Sí, eliminar
-              </button>
-              <button
-                onClick={() => setShowConfirm(null)}
-                className="flex-1 bg-gray-300 text-gray-800 py-2 rounded hover:bg-gray-400"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <ConfirmDialog
+        open={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={handleDelete}
+        title="¿Eliminar proveedor?"
+        message="Esta acción no se puede deshacer."
+      />
+    </Box>
   )
 }

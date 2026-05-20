@@ -1,338 +1,240 @@
-// frontend/src/pages/AlertasPage.jsx
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useAlertas } from '../hooks/useAlertas'
-import AlertaCard from '../components/AlertaCard'
-import GastoForm from '../components/GastoForm'
-import AlertasList from '../components/AlertasList'
+import LoadingSpinner from '../components/LoadingSpinner'
+import PageAlert      from '../components/ui/PageAlert'
+import ConfirmDialog  from '../components/ui/ConfirmDialog'
+import AlertaCard     from '../components/AlertaCard'
+import AlertasList    from '../components/AlertasList'
+import GastoForm      from '../components/GastoForm'
 
-const AlertasPage = () => {
-  const { 
-    alertas, 
-    alertasPendientes, 
-    gastos, 
-    totalGastos,
-    marcarAlertaLeida, 
-    eliminarAlerta,
-    actualizarGasto,
-    eliminarGasto,
-    loading 
+import {
+  Box, Paper, Table, TableHead, TableBody, TableRow, TableCell,
+  Typography, Tabs, Tab, Chip, Card, CardContent, Grid,
+  IconButton, Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  Button, TextField, MenuItem,
+} from '@mui/material'
+import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined'
+import ListAltOutlinedIcon       from '@mui/icons-material/ListAltOutlined'
+import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined'
+import AddCircleOutlinedIcon     from '@mui/icons-material/AddCircleOutlined'
+import EditOutlinedIcon          from '@mui/icons-material/EditOutlined'
+import DeleteOutlinedIcon        from '@mui/icons-material/DeleteOutlined'
+
+const TIPOS_GASTO = [
+  { value: 'SANIDAD',       label: 'Sanidad' },
+  { value: 'REPRODUCCION',  label: 'Reproducción' },
+  { value: 'ALIMENTO',      label: 'Alimento' },
+  { value: 'MANO_DE_OBRA',  label: 'Mano de obra' },
+  { value: 'TRANSPORTE',    label: 'Transporte' },
+  { value: 'MANTENIMIENTO', label: 'Mantenimiento' },
+  { value: 'COMBUSTIBLE',   label: 'Combustible' },
+  { value: 'OTRO',          label: 'Otro' },
+]
+
+const KPI = ({ label, value, accent }) => (
+  <Card elevation={0} sx={{ border: '1px solid #E2E8F0', borderLeft: `4px solid ${accent}`, borderRadius: 2 }}>
+    <CardContent sx={{ p: '16px !important' }}>
+      <Typography variant="caption" color="text.secondary">{label}</Typography>
+      <Typography variant="h5" fontWeight={700} sx={{ color: accent, lineHeight: 1.2 }}>{value}</Typography>
+    </CardContent>
+  </Card>
+)
+
+const TABS = [
+  { label: 'Alertas pendientes', Icon: NotificationsOutlinedIcon },
+  { label: 'Todas las alertas',  Icon: ListAltOutlinedIcon },
+  { label: 'Gastos',             Icon: AccountBalanceOutlinedIcon },
+  { label: '+ Nuevo Gasto',      Icon: AddCircleOutlinedIcon },
+]
+
+const EMPTY_EDIT = { id: '', fecha: '', tipoGasto: '', descripcion: '', cantidad: 1, precioUnitario: '', animalId: '' }
+
+export default function AlertasPage() {
+  const {
+    alertas, alertasPendientes, gastos, totalGastos,
+    marcarAlertaLeida, eliminarAlerta, actualizarGasto, eliminarGasto, loading,
   } = useAlertas()
 
-  const [activeTab, setActiveTab] = useState('alertas')
+  const [tabIdx, setTabIdx]           = useState(0)
+  const [message, setMessage]         = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editForm, setEditForm] = useState({
-    id: '',
-    fecha: '',
-    tipoGasto: '',
-    descripcion: '',
-    cantidad: 1,
-    precioUnitario: '',
-    animalId: ''
-  })
+  const [editForm, setEditForm]       = useState(EMPTY_EDIT)
+  const [confirmGastoId, setConfirmGastoId] = useState(null)
+  const [confirmAlertaId, setConfirmAlertaId] = useState(null)
 
-  const tiposGasto = [
-    { value: 'SANIDAD', label: '🩺 Sanidad' },
-    { value: 'REPRODUCCION', label: '🐄 Reproducción' },
-    { value: 'ALIMENTO', label: '🍖 Alimento' },
-    { value: 'MANO_DE_OBRA', label: '👨‍🌾 Mano de obra' },
-    { value: 'TRANSPORTE', label: '🚚 Transporte' },
-    { value: 'MANTENIMIENTO', label: '🔧 Mantenimiento' },
-    { value: 'COMBUSTIBLE', label: '⛽ Combustible' },
-    { value: 'OTRO', label: '📋 Otro' },
-  ]
+  const notify = (type, text) => {
+    setMessage({ type, text })
+    setTimeout(() => setMessage(null), 3500)
+  }
+
+  const setField = (f) => (e) => setEditForm(p => ({ ...p, [f]: e.target.value }))
 
   const handleMarcarLeida = async (id) => {
-    const result = await marcarAlertaLeida(id)
-    if (result.success) {
-      alert('✅ Alerta marcada como leída')
-    } else {
-      alert(`❌ Error: ${result.error}`)
-    }
+    const r = await marcarAlertaLeida(id)
+    notify(r.success ? 'success' : 'error', r.success ? 'Alerta marcada como leída' : r.error)
   }
 
-  const handleEliminarAlerta = async (id) => {
-    if (window.confirm('¿Eliminar esta alerta?')) {
-      const result = await eliminarAlerta(id)
-      if (result.success) {
-        alert('✅ Alerta eliminada')
-      } else {
-        alert(`❌ Error: ${result.error}`)
-      }
-    }
+  const handleEliminarAlerta = async () => {
+    const r = await eliminarAlerta(confirmAlertaId)
+    notify(r.success ? 'success' : 'error', r.success ? 'Alerta eliminada' : r.error)
+    setConfirmAlertaId(null)
   }
 
-  const handleEliminarGasto = async (id) => {
-    if (window.confirm('¿Eliminar este gasto?')) {
-      const result = await eliminarGasto(id)
-      if (result.success) {
-        alert('✅ Gasto eliminado')
-      } else {
-        alert(`❌ Error: ${result.error}`)
-      }
-    }
-  }
-
-  const handleEditarGasto = (gasto) => {
-    setEditForm({
-      id: gasto.id,
-      fecha: gasto.fecha,
-      tipoGasto: gasto.tipoGasto,
-      descripcion: gasto.descripcion,
-      cantidad: gasto.cantidad,
-      precioUnitario: gasto.precioUnitario,
-      animalId: gasto.animal?.id || ''
-    })
+  const handleEditarGasto = (g) => {
+    setEditForm({ id: g.id, fecha: g.fecha, tipoGasto: g.tipoGasto, descripcion: g.descripcion, cantidad: g.cantidad, precioUnitario: g.precioUnitario, animalId: g.animal?.id || '' })
     setShowEditModal(true)
   }
 
   const handleActualizarGasto = async (e) => {
     e.preventDefault()
-    const result = await actualizarGasto(editForm.id, {
-      fecha: editForm.fecha,
-      tipoGasto: editForm.tipoGasto,
-      descripcion: editForm.descripcion,
-      cantidad: parseFloat(editForm.cantidad),
-      precioUnitario: parseFloat(editForm.precioUnitario),
-      animalId: editForm.animalId || null
+    const r = await actualizarGasto(editForm.id, {
+      fecha: editForm.fecha, tipoGasto: editForm.tipoGasto, descripcion: editForm.descripcion,
+      cantidad: parseFloat(editForm.cantidad), precioUnitario: parseFloat(editForm.precioUnitario),
+      animalId: editForm.animalId || null,
     })
-    if (result.success) {
-      alert('✅ Gasto actualizado exitosamente')
-      setShowEditModal(false)
-    } else {
-      alert(`❌ Error: ${result.error}`)
-    }
+    notify(r.success ? 'success' : 'error', r.success ? 'Gasto actualizado' : r.error)
+    if (r.success) setShowEditModal(false)
   }
 
-  const tabs = [
-    { id: 'alertas', label: '🔔 Alertas', count: alertasPendientes.length },
-    { id: 'todos', label: '📋 Todas las Alertas', count: alertas.length },
-    { id: 'gastos', label: '💰 Gastos', count: gastos.length },
-    { id: 'nuevo_gasto', label: '+ Nuevo Gasto' },
-  ]
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-      </div>
-    )
+  const handleEliminarGasto = async () => {
+    const r = await eliminarGasto(confirmGastoId)
+    notify(r.success ? 'success' : 'error', r.success ? 'Gasto eliminado' : r.error)
+    setConfirmGastoId(null)
   }
+
+  const tabsWithCount = TABS.map((t, i) => ({
+    ...t,
+    count: i === 0 ? alertasPendientes.length : i === 1 ? alertas.length : i === 2 ? gastos.length : undefined,
+  }))
+
+  if (loading) return <LoadingSpinner />
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-red-800">🔔 Módulo de Alertas y Gastos</h1>
-        <p className="text-gray-600">Gestión de notificaciones y registro de gastos</p>
-      </div>
+    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      <Box>
+        <Typography variant="h5" fontWeight={700}>Módulo de Alertas y Gastos</Typography>
+        <Typography variant="body2" color="text.secondary">Gestión de notificaciones y registro de gastos</Typography>
+      </Box>
 
-      {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
-          <div className="text-sm text-gray-500">Alertas Pendientes</div>
-          <div className="text-2xl font-bold text-yellow-700">{alertasPendientes.length}</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
-          <div className="text-sm text-gray-500">Total Alertas</div>
-          <div className="text-2xl font-bold text-blue-700">{alertas.length}</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
-          <div className="text-sm text-gray-500">Total Gastos</div>
-          <div className="text-2xl font-bold text-green-700">Gs. {totalGastos.toLocaleString()}</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
-          <div className="text-sm text-gray-500">Registros de Gastos</div>
-          <div className="text-2xl font-bold text-purple-700">{gastos.length}</div>
-        </div>
-      </div>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6} md={3}><KPI label="Alertas pendientes"   value={alertasPendientes.length}            accent="#E65100" /></Grid>
+        <Grid item xs={12} sm={6} md={3}><KPI label="Total alertas"        value={alertas.length}                     accent="#1565C0" /></Grid>
+        <Grid item xs={12} sm={6} md={3}><KPI label="Total gastos"         value={`Gs. ${totalGastos.toLocaleString()}`} accent="#2E7D32" /></Grid>
+        <Grid item xs={12} sm={6} md={3}><KPI label="Registros de gastos"  value={gastos.length}                      accent="#6A1B9A" /></Grid>
+      </Grid>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
-        <nav className="flex space-x-4">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-4 font-medium transition-colors whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'border-b-2 border-red-500 text-red-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label} {tab.count !== undefined && `(${tab.count})`}
-            </button>
+      <PageAlert message={message} onClose={() => setMessage(null)} />
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={tabIdx} onChange={(_, v) => setTabIdx(v)} variant="scrollable" scrollButtons="auto">
+          {tabsWithCount.map(({ label, Icon, count }) => (
+            <Tab key={label} icon={<Icon sx={{ fontSize: 17 }} />} iconPosition="start"
+              label={count !== undefined ? `${label} (${count})` : label}
+              sx={{ minHeight: 48, textTransform: 'none', fontWeight: 500, fontSize: 13 }} />
           ))}
-        </nav>
-      </div>
+        </Tabs>
+      </Box>
 
-      {/* Content */}
-      <div>
-        {activeTab === 'alertas' && (
-          <AlertasList
-            alertas={alertasPendientes}
-            onMarcarLeida={handleMarcarLeida}
-            onEliminar={handleEliminarAlerta}
-            titulo="🔔 Alertas Pendientes"
-          />
-        )}
-
-        {activeTab === 'todos' && (
-          <AlertasList
-            alertas={alertas}
-            onMarcarLeida={handleMarcarLeida}
-            onEliminar={handleEliminarAlerta}
-            titulo="📋 Historial de Alertas"
-          />
-        )}
-
-        {activeTab === 'gastos' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Animal</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {gastos.map(g => (
-                  <tr key={g.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm">{new Date(g.fecha).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className="px-2 py-1 rounded-full text-xs bg-gray-100">
-                        {g.tipoGasto}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm">{g.descripcion?.substring(0, 50)}</td>
-                    <td className="px-6 py-4 text-sm">{g.cantidad}</td>
-                    <td className="px-6 py-4 text-sm">Gs. {parseFloat(g.precioUnitario).toLocaleString()}</td>
-                    <td className="px-6 py-4 text-sm font-bold">Gs. {parseFloat(g.total).toLocaleString()}</td>
-                    <td className="px-6 py-4 text-sm">{g.animal?.nroArete || '-'}</td>
-                    <td className="px-6 py-4 text-center space-x-2">
-                      <button
-                        onClick={() => handleEditarGasto(g)}
-                        className="bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600 text-xs"
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        onClick={() => handleEliminarGasto(g.id)}
-                        className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-xs"
-                      >
-                        🗑️ Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === 'nuevo_gasto' && (
-          <GastoForm onSuccess={() => setActiveTab('gastos')} />
-        )}
-      </div>
-
-      {/* Modal de Edición de Gasto */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-red-800 mb-4">✏️ Editar Gasto</h2>
-            <form onSubmit={handleActualizarGasto}>
-              <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700">Fecha</label>
-                <input
-                  type="date"
-                  value={editForm.fecha}
-                  onChange={(e) => setEditForm({ ...editForm, fecha: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                  required
-                />
-              </div>
-
-              <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700">Tipo de Gasto</label>
-                <select
-                  value={editForm.tipoGasto}
-                  onChange={(e) => setEditForm({ ...editForm, tipoGasto: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                  required
-                >
-                  {tiposGasto.map(t => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700">Descripción</label>
-                <textarea
-                  value={editForm.descripcion}
-                  onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })}
-                  rows="2"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Cantidad</label>
-                  <input
-                    type="number"
-                    step="1"
-                    value={editForm.cantidad}
-                    onChange={(e) => setEditForm({ ...editForm, cantidad: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Precio Unitario</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editForm.precioUnitario}
-                    onChange={(e) => setEditForm({ ...editForm, precioUnitario: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700">Animal (opcional)</label>
-                <input
-                  type="text"
-                  value={editForm.animalId}
-                  onChange={(e) => setEditForm({ ...editForm, animalId: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                  placeholder="ID del animal"
-                />
-              </div>
-
-              <div className="flex gap-3 mt-5">
-                <button type="submit" className="flex-1 bg-green-600 text-white py-2 rounded-md hover:bg-green-700">
-                  💾 Guardar Cambios
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 bg-gray-300 text-gray-800 py-2 rounded-md hover:bg-gray-400"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {tabIdx === 0 && (
+        <AlertasList alertas={alertasPendientes} onMarcarLeida={handleMarcarLeida} onEliminar={(id) => setConfirmAlertaId(id)} titulo="Alertas Pendientes" />
       )}
-    </div>
+
+      {tabIdx === 1 && (
+        <AlertasList alertas={alertas} onMarcarLeida={handleMarcarLeida} onEliminar={(id) => setConfirmAlertaId(id)} titulo="Historial de Alertas" />
+      )}
+
+      {tabIdx === 2 && (
+        <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Tipo</TableCell>
+                  <TableCell>Descripción</TableCell>
+                  <TableCell>Cant.</TableCell>
+                  <TableCell>Precio unit.</TableCell>
+                  <TableCell>Total</TableCell>
+                  <TableCell>Animal</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {gastos.map(g => (
+                  <TableRow key={g.id} hover>
+                    <TableCell>{new Date(g.fecha).toLocaleDateString('es-PY')}</TableCell>
+                    <TableCell>
+                      <Chip size="small" label={g.tipoGasto} sx={{ bgcolor: '#F1F5F9', color: '#475569', fontWeight: 500 }} />
+                    </TableCell>
+                    <TableCell>{g.descripcion?.substring(0, 50)}</TableCell>
+                    <TableCell>{g.cantidad}</TableCell>
+                    <TableCell>Gs. {parseFloat(g.precioUnitario).toLocaleString()}</TableCell>
+                    <TableCell><Typography variant="body2" fontWeight={700}>Gs. {parseFloat(g.total).toLocaleString()}</Typography></TableCell>
+                    <TableCell>{g.animal?.nroArete || '—'}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Editar">
+                        <IconButton size="small" color="warning" onClick={() => handleEditarGasto(g)}>
+                          <EditOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton size="small" color="error" onClick={() => setConfirmGastoId(g.id)}>
+                          <DeleteOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
+      )}
+
+      {tabIdx === 3 && <GastoForm onSuccess={() => setTabIdx(2)} />}
+
+      {/* Edit gasto dialog */}
+      <Dialog open={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Editar Gasto</DialogTitle>
+        <DialogContent dividers>
+          <Box component="form" id="gasto-form" onSubmit={handleActualizarGasto} sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField label="Fecha" type="date" required size="small" InputLabelProps={{ shrink: true }} value={editForm.fecha} onChange={setField('fecha')} />
+            <TextField select label="Tipo de gasto" required size="small" value={editForm.tipoGasto} onChange={setField('tipoGasto')}>
+              {TIPOS_GASTO.map(t => <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>)}
+            </TextField>
+            <TextField label="Descripción" required size="small" multiline rows={2} value={editForm.descripcion} onChange={setField('descripcion')} />
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField label="Cantidad" type="number" size="small" fullWidth value={editForm.cantidad} onChange={setField('cantidad')} />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField label="Precio unitario" type="number" step="0.01" size="small" fullWidth value={editForm.precioUnitario} onChange={setField('precioUnitario')} />
+              </Grid>
+            </Grid>
+            <TextField label="ID del animal (opcional)" size="small" value={editForm.animalId} onChange={setField('animalId')} />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button onClick={() => setShowEditModal(false)} variant="outlined" color="inherit">Cancelar</Button>
+          <Button type="submit" form="gasto-form" variant="contained" color="primary">Guardar cambios</Button>
+        </DialogActions>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!confirmGastoId}
+        onClose={() => setConfirmGastoId(null)}
+        onConfirm={handleEliminarGasto}
+        title="¿Eliminar gasto?"
+        message="Esta acción no se puede deshacer."
+      />
+      <ConfirmDialog
+        open={!!confirmAlertaId}
+        onClose={() => setConfirmAlertaId(null)}
+        onConfirm={handleEliminarAlerta}
+        title="¿Eliminar alerta?"
+        message="Esta acción no se puede deshacer."
+      />
+    </Box>
   )
 }
-
-export default AlertasPage

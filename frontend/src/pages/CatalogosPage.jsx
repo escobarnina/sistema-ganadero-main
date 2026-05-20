@@ -5,46 +5,56 @@ import RazasList from '../components/catalogos/RazasList'
 import CategoriasList from '../components/catalogos/CategoriasList'
 import VeterinariosList from '../components/catalogos/VeterinariosList'
 import ReproductoresList from '../components/catalogos/ReproductoresList'
+import PageHeader from '../components/ui/PageHeader'
 
-const tabs = [
-  { id: 'medicamentos', name: '💊 Medicamentos', component: MedicamentosList },
-  { id: 'alimentos', name: '🌾 Alimentos', component: AlimentosList },
-  { id: 'razas', name: '🐄 Razas', component: RazasList },
-  { id: 'categorias', name: '📋 Categorías', component: CategoriasList },
-  { id: 'veterinarios', name: '👨‍⚕️ Veterinarios', component: VeterinariosList },
-  { id: 'reproductores', name: '🧬 Reproductores', component: ReproductoresList },
+import { Box, Tabs, Tab } from '@mui/material'
+import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined'
+import MedicalServicesOutlinedIcon from '@mui/icons-material/MedicalServicesOutlined'
+import GrassOutlinedIcon from '@mui/icons-material/GrassOutlined'
+import PetsOutlinedIcon from '@mui/icons-material/PetsOutlined'
+import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined'
+import LocalHospitalOutlinedIcon from '@mui/icons-material/LocalHospitalOutlined'
+import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined'
+
+const TABS = [
+  { id: 'medicamentos', label: 'Medicamentos', Icon: MedicalServicesOutlinedIcon, Component: MedicamentosList },
+  { id: 'alimentos', label: 'Alimentos', Icon: GrassOutlinedIcon, Component: AlimentosList },
+  { id: 'razas', label: 'Razas', Icon: PetsOutlinedIcon, Component: RazasList },
+  { id: 'categorias', label: 'Categorías', Icon: CategoryOutlinedIcon, Component: CategoriasList },
+  { id: 'veterinarios', label: 'Veterinarios', Icon: LocalHospitalOutlinedIcon, Component: VeterinariosList },
+  { id: 'reproductores', label: 'Reproductores', Icon: ScienceOutlinedIcon, Component: ReproductoresList },
 ]
 
 export default function CatalogosPage() {
-  const [activeTab, setActiveTab] = useState('medicamentos')
-
-  const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component
+  const [tabIdx, setTabIdx] = useState(0)
+  const { Component } = TABS[tabIdx]
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">📦 Catálogos</h1>
-      
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
-        <nav className="flex space-x-4">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition ${
-                activeTab === tab.id
-                  ? 'bg-green-600 text-white'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {tab.name}
-            </button>
-          ))}
-        </nav>
-      </div>
+    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      <PageHeader title="Catálogos" icon={InventoryOutlinedIcon} />
 
-      {/* Contenido activo */}
-      {ActiveComponent && <ActiveComponent />}
-    </div>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs
+          value={tabIdx}
+          onChange={(_, v) => setTabIdx(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          {TABS.map(({ id, label, Icon }) => (
+            <Tab
+              key={id}
+              icon={<Icon sx={{ fontSize: 17 }} />}
+              iconPosition="start"
+              label={label}
+              sx={{ minHeight: 48, textTransform: 'none', fontWeight: 500, fontSize: 13 }}
+            />
+          ))}
+        </Tabs>
+      </Box>
+
+      <Box>
+        <Component />
+      </Box>
+    </Box>
   )
 }

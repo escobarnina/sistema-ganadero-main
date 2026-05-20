@@ -1,9 +1,21 @@
+import { Snackbar, Alert } from '@mui/material'
+
 export default function SuccessMessage({ message, onClose }) {
   return (
-    <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-slide-in">
-      <span>✅</span>
-      <p>{message}</p>
-      <button onClick={onClose} className="ml-4 text-white hover:text-gray-200">✕</button>
-    </div>
+    <Snackbar
+      open={!!message}
+      autoHideDuration={4000}
+      onClose={onClose}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+    >
+      <Alert
+        onClose={onClose}
+        severity="success"
+        variant="filled"
+        sx={{ borderRadius: 2, minWidth: 280, fontWeight: 500 }}
+      >
+        {message}
+      </Alert>
+    </Snackbar>
   )
 }

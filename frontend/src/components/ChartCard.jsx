@@ -1,18 +1,17 @@
-// frontend/src/components/ChartCard.jsx
-import React from 'react'
+import { Paper, Typography, Box } from '@mui/material'
 
-const ChartCard = ({ title, children, icon }) => {
+export default function ChartCard({ title, children }) {
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xl">{icon}</span>
-        <h2 className="text-lg font-bold text-gray-800">{title}</h2>
-      </div>
-      <div className="h-64">
+    <Paper elevation={0} sx={{ border: '1px solid #E2E8F0', borderRadius: 3, p: 2.5 }}>
+      <Typography
+        variant="subtitle1"
+        sx={{ fontWeight: 600, color: 'text.primary', mb: 2, fontSize: '0.9rem' }}
+      >
+        {title}
+      </Typography>
+      <Box sx={{ height: 256 }}>
         {children}
-      </div>
-    </div>
+      </Box>
+    </Paper>
   )
 }
-
-export default ChartCard
