@@ -71,7 +71,7 @@ export const useMuertesBajas = () => {
 
   return {
     muertesBajas: data?.muertesBajas || [],
-    animalesDisponibles: animalesData?.animalesActivos || [],
+    animalesDisponibles: animalesData?.animalesDisponibles || [],
     loading: loading || loadingAnimales,
     error,
     crearMuerteBaja,
