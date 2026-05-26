@@ -8,7 +8,7 @@ const ParcelaForm = ({ parcelaParaEditar, onSubmit, onCancel }) => {
     tamano: parcelaParaEditar?.tamano || '',
     capacidadMaxima: parcelaParaEditar?.capacidadMaxima || '',
     tipoPastura: parcelaParaEditar?.tipoPastura || '',
-    estado: parcelaParaEditar?.estado || 'ACTIVA'
+    estado: parcelaParaEditar?.estado || 'LIBRE'
   })
 
   const tiposPastura = [
@@ -22,9 +22,8 @@ const ParcelaForm = ({ parcelaParaEditar, onSubmit, onCancel }) => {
   ]
 
   const estados = [
-    { value: 'ACTIVA', label: '✅ Activa' },
-    { value: 'EN_DESCANSO', label: '😴 En Descanso' },
-    { value: 'MANTENIMIENTO', label: '🔧 Mantenimiento' },
+    { value: 'LIBRE',    label: '✅ Libre'    },
+    { value: 'DESCANSO', label: '😴 Descanso' },
   ]
 
   const handleSubmit = async (e) => {

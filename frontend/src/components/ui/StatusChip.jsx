@@ -9,10 +9,10 @@ const PRESET = {
   INACTIVO:     { color: 'default', label: 'Inactivo'    },
   LICENCIA:     { color: 'warning', label: 'Licencia'    },
   VACACIONES:   { color: 'info',    label: 'Vacaciones'  },
-  // estados de parcela
-  ACTIVA:       { color: 'success', label: 'Activa'      },
-  EN_DESCANSO:  { color: 'warning', label: 'En Descanso' },
-  MANTENIMIENTO:{ color: 'info',    label: 'Mantenimiento'},
+  // estados operativos de parcela
+  LIBRE:    { color: 'success', label: 'Libre'    },
+  OCUPADO:  { color: 'primary', label: 'Ocupado'  },
+  DESCANSO: { color: 'warning', label: 'Descanso' },
   // estados de animal
   VENDIDO:      { color: 'default', label: 'Vendido'     },
   MUERTO:       { color: 'error',   label: 'Muerto'      },

@@ -447,6 +447,15 @@ export default function AnimalesPage() {
                           ))}
                         </Grid>
 
+                        {(() => {
+                          const ocu = parcela.ocupacionActual ?? parcela.animalesActuales?.length ?? 0
+                          const cap = parcela.capacidadMaxima
+                          if (!cap) return null
+                          if (ocu > cap) return <Chip label="Sobreocupado" size="small" color="error" sx={{ mb: 1 }} />
+                          if (ocu >= cap) return <Chip label="Capacidad completa" size="small" color="warning" sx={{ mb: 1 }} />
+                          return null
+                        })()}
+
                         {parcela.animalesActuales?.length > 0 && (
                           <Box sx={{ borderTop: '1px solid #F1F5F9', pt: 1.5 }}>
                             <Typography variant="caption" fontWeight={700} color="text.secondary"

@@ -304,18 +304,20 @@ class Query(graphene.ObjectType):
         if estado and estado not in ('', 'TODOS'):
             qs = qs.filter(estado=estado)
 
-        if temporal == 'ultimos_movimientos':
+        if temporal == 'ULTIMOS_MOVIMIENTOS':
             qs = qs.filter(
-                historial_animales__fecha_ingreso__gte=hoy - timedelta(days=30)
+                Q(historial_animales__fecha_ingreso__gte=hoy - timedelta(days=30)) |
+                Q(historial_animales__fecha_salida__gte=hoy - timedelta(days=30))
             ).distinct()
-        elif temporal == 'animales_agregados_recientemente':
+        elif temporal == 'ANIMALES_RECIENTES':
             qs = qs.filter(
-                historial_animales__fecha_ingreso__gte=hoy - timedelta(days=7)
+                historial_animales__fecha_ingreso__gte=hoy - timedelta(days=30),
+                historial_animales__fecha_salida__isnull=True,
             ).distinct()
-        elif temporal == 'movimientos_recientes':
+        elif temporal == 'MOVIMIENTOS_RECIENTES':
             qs = qs.filter(
-                Q(historial_animales__fecha_ingreso__gte=hoy - timedelta(days=7)) |
-                Q(historial_animales__fecha_salida__gte=hoy - timedelta(days=7))
+                Q(historial_animales__fecha_ingreso__gte=hoy - timedelta(days=30)) |
+                Q(historial_animales__fecha_salida__gte=hoy - timedelta(days=30))
             ).distinct()
 
         if ordering == 'mayor_ocupacion':
