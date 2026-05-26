@@ -6,13 +6,15 @@ import { gql } from '@apollo/client'
 // ==========================================
 
 export const GET_INSEMINACIONES = gql`
-  query GetInseminaciones {
-    inseminaciones {
+  query GetInseminaciones($fincaId: ID) {
+    inseminaciones(fincaId: $fincaId) {
       id
       fecha
+      fechaProbableParto
       numeroServicio
       numeroPajuela
       tecnicoInseminador
+      resultado
       observaciones
       hembra {
         id
@@ -23,17 +25,20 @@ export const GET_INSEMINACIONES = gql`
         id
         codigo
         nombre
+        tipoOrigen
       }
     }
   }
 `
 
 export const GET_MONTAS_NATURALES = gql`
-  query GetMontasNaturales {
-    montasNaturales {
+  query GetMontasNaturales($fincaId: ID) {
+    montasNaturales(fincaId: $fincaId) {
       id
       fecha
+      fechaProbableParto
       numeroServicio
+      resultado
       observaciones
       hembra {
         id
@@ -44,14 +49,15 @@ export const GET_MONTAS_NATURALES = gql`
         id
         codigo
         nombre
+        tipoOrigen
       }
     }
   }
 `
 
 export const GET_DIAGNOSTICOS_PRENEZ = gql`
-  query GetDiagnosticosPrenez {
-    diagnosticosPrenez {
+  query GetDiagnosticosPrenez($fincaId: ID) {
+    diagnosticosPrenez(fincaId: $fincaId) {
       id
       fecha
       resultadoPrenez
@@ -67,10 +73,11 @@ export const GET_DIAGNOSTICOS_PRENEZ = gql`
 `
 
 export const GET_REPRODUCCIONES = gql`
-  query GetReproducciones {
-    reproducciones {
+  query GetReproducciones($fincaId: ID) {
+    reproducciones(fincaId: $fincaId) {
       id
       fechaServicio
+      fechaPartoEsperado
       fechaPartoReal
       tipoParto
       numCrias
@@ -81,13 +88,46 @@ export const GET_REPRODUCCIONES = gql`
         nombre
         nroArete
       }
+      padre {
+        id
+        nombre
+        nroArete
+      }
+      inseminacion {
+        id
+        fecha
+        reproductor {
+          id
+          codigo
+          nombre
+          tipoOrigen
+        }
+      }
+      monta {
+        id
+        fecha
+        reproductor {
+          id
+          codigo
+          nombre
+          tipoOrigen
+        }
+      }
+      crias {
+        id
+        nroArete
+        nombre
+        sexo
+        origen
+        fechaNacimiento
+      }
     }
   }
 `
 
 export const GET_VACAS_PREÑADAS = gql`
-  query GetVacasPrenadas {
-    vacasPrenadas {
+  query GetVacasPrenadas($fincaId: ID) {
+    vacasPrenadas(fincaId: $fincaId) {
       id
       fechaServicio
       fechaPartoEsperado
@@ -101,8 +141,8 @@ export const GET_VACAS_PREÑADAS = gql`
 `
 
 export const GET_PROXIMOS_PARTOS = gql`
-  query GetProximosPartos($dias: Int) {
-    proximosPartos(dias: $dias) {
+  query GetProximosPartos($dias: Int, $fincaId: ID) {
+    proximosPartos(dias: $dias, fincaId: $fincaId) {
       id
       fechaPartoEsperado
       estado
@@ -147,6 +187,8 @@ export const CREATE_INSEMINACION = gql`
           nombre
         }
       }
+      success
+      message
     }
   }
 `
@@ -172,6 +214,8 @@ export const CREATE_DIAGNOSTICO_PRENEZ = gql`
         id
         resultadoPrenez
       }
+      success
+      message
     }
   }
 `
@@ -201,6 +245,68 @@ export const CREATE_REPRODUCCION = gql`
         id
         estado
       }
+      success
+      message
+    }
+  }
+`
+
+export const REGISTRAR_PARTO_CON_CRIAS = gql`
+  mutation RegistrarPartoConCrias(
+    $fincaId: ID!
+    $madreId: ID!
+    $inseminacionId: ID
+    $montaId: ID
+    $padreId: ID
+    $fechaPartoEsperado: Date
+    $fechaPartoReal: Date!
+    $tipoParto: String
+    $numCrias: Int
+    $observaciones: String
+    $crearLactancia: Boolean
+    $crias: [CriaInput]
+  ) {
+    registrarPartoConCrias(
+      fincaId: $fincaId
+      madreId: $madreId
+      inseminacionId: $inseminacionId
+      montaId: $montaId
+      padreId: $padreId
+      fechaPartoEsperado: $fechaPartoEsperado
+      fechaPartoReal: $fechaPartoReal
+      tipoParto: $tipoParto
+      numCrias: $numCrias
+      observaciones: $observaciones
+      crearLactancia: $crearLactancia
+      crias: $crias
+    ) {
+      reproduccion {
+        id
+        fechaPartoReal
+        tipoParto
+        numCrias
+        estado
+        madre {
+          id
+          nroArete
+          nombre
+        }
+        padre {
+          id
+          nroArete
+          nombre
+        }
+        crias {
+          id
+          nroArete
+          nombre
+          sexo
+          origen
+          fechaNacimiento
+        }
+      }
+      success
+      message
     }
   }
 `

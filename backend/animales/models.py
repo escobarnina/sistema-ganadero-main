@@ -99,6 +99,16 @@ class Animal(models.Model):
     observaciones = models.TextField(blank=True, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['nombre']),
+            models.Index(fields=['nro_arete']),
+            models.Index(fields=['fecha_nacimiento']),
+            models.Index(fields=['estado']),
+            models.Index(fields=['finca', 'estado']),
+            models.Index(fields=['finca', 'fecha_registro']),
+        ]
+
     def __str__(self):
         return f"{self.nro_arete} - {self.nombre or ''}"
 

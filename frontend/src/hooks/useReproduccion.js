@@ -10,42 +10,41 @@ import {
   CREATE_INSEMINACION,
   CREATE_DIAGNOSTICO_PRENEZ,
   CREATE_REPRODUCCION,
+  REGISTRAR_PARTO_CON_CRIAS,
 } from '../graphql/reproduccion'
 
 export const useReproduccion = () => {
-  // Queries
-  const { data: inseminaciones, loading: loadingInseminaciones, refetch: refetchInseminaciones } = useQuery(GET_INSEMINACIONES)
-  const { data: montasNaturales, loading: loadingMontas } = useQuery(GET_MONTAS_NATURALES)
-  const { data: diagnosticos, loading: loadingDiagnosticos } = useQuery(GET_DIAGNOSTICOS_PRENEZ)
-  const { data: reproducciones, loading: loadingReproducciones } = useQuery(GET_REPRODUCCIONES)
-  const { data: vacasPrenadas, loading: loadingVacasPrenadas } = useQuery(GET_VACAS_PREÑADAS)
-  const { data: proximosPartos, loading: loadingProximosPartos, refetch: refetchProximosPartos } = useQuery(GET_PROXIMOS_PARTOS, {
-    variables: { dias: 30 }
-  })
+  const fincaId = localStorage.getItem('fincaId') || '1'
+
+  const { data: inseminacionesData, loading: loadingInseminaciones, refetch: refetchInseminaciones } =
+    useQuery(GET_INSEMINACIONES, { variables: { fincaId } })
+
+  const { data: montasData, loading: loadingMontas } =
+    useQuery(GET_MONTAS_NATURALES, { variables: { fincaId } })
+
+  const { data: diagnosticosData, loading: loadingDiagnosticos } =
+    useQuery(GET_DIAGNOSTICOS_PRENEZ, { variables: { fincaId } })
+
+  const { data: reproduccionesData, loading: loadingReproducciones, refetch: refetchReproducciones } =
+    useQuery(GET_REPRODUCCIONES, { variables: { fincaId } })
+
+  const { data: vacasPrenadasData, loading: loadingVacasPrenadas } =
+    useQuery(GET_VACAS_PREÑADAS, { variables: { fincaId } })
+
+  const { data: proximosPartosData, loading: loadingProximosPartos, refetch: refetchProximosPartos } =
+    useQuery(GET_PROXIMOS_PARTOS, { variables: { dias: 30, fincaId } })
 
   // Mutations
   const [crearInseminacionMutation] = useMutation(CREATE_INSEMINACION)
   const [crearDiagnosticoMutation] = useMutation(CREATE_DIAGNOSTICO_PRENEZ)
   const [crearReproduccionMutation] = useMutation(CREATE_REPRODUCCION)
+  const [registrarPartoConCriasMutation] = useMutation(REGISTRAR_PARTO_CON_CRIAS)
 
-  // Función para crear inseminación
   const crearInseminacion = async (variables) => {
     try {
-      const fincaId = localStorage.getItem('fincaId') || '1'
-      
       const { data } = await crearInseminacionMutation({
-        variables: {
-          fincaId: fincaId,
-          hembraId: variables.hembraId,
-          fecha: variables.fecha,
-          reproductorId: variables.reproductorId,
-          numeroServicio: variables.numeroServicio,
-          numeroPajuela: variables.numeroPajuela,
-          tecnicoInseminador: variables.tecnicoInseminador,
-          observaciones: variables.observaciones
-        }
+        variables: { fincaId, ...variables }
       })
-      
       await refetchInseminaciones()
       return { success: true, data: data?.crearInseminacionArtificial }
     } catch (error) {
@@ -54,22 +53,11 @@ export const useReproduccion = () => {
     }
   }
 
-  // Función para crear diagnóstico de preñez
   const crearDiagnostico = async (variables) => {
     try {
-      const fincaId = localStorage.getItem('fincaId') || '1'
-      
       const { data } = await crearDiagnosticoMutation({
-        variables: {
-          fincaId: fincaId,
-          hembraId: variables.hembraId,
-          fecha: variables.fecha,
-          resultadoPrenez: variables.resultadoPrenez,
-          diasGestacion: variables.diasGestacion,
-          metodo: variables.metodo
-        }
+        variables: { fincaId, ...variables }
       })
-      
       return { success: true, data: data?.crearDiagnosticoPrenez }
     } catch (error) {
       console.error('Error al crear diagnóstico:', error)
@@ -77,24 +65,11 @@ export const useReproduccion = () => {
     }
   }
 
-  // Función para crear reproducción (parto)
   const crearReproduccion = async (variables) => {
     try {
-      const fincaId = localStorage.getItem('fincaId') || '1'
-      
       const { data } = await crearReproduccionMutation({
-        variables: {
-          fincaId: fincaId,
-          madreId: variables.madreId,
-          fechaServicio: variables.fechaServicio,
-          fechaPartoReal: variables.fechaPartoReal,
-          tipoParto: variables.tipoParto,
-          numCrias: variables.numCrias,
-          estado: variables.estado,
-          observaciones: variables.observaciones
-        }
+        variables: { fincaId, ...variables }
       })
-      
       await refetchProximosPartos()
       return { success: true, data: data?.crearReproduccion }
     } catch (error) {
@@ -103,25 +78,47 @@ export const useReproduccion = () => {
     }
   }
 
+  const registrarPartoConCrias = async (variables) => {
+    try {
+      const { data } = await registrarPartoConCriasMutation({
+        variables: { fincaId, ...variables }
+      })
+      const result = data?.registrarPartoConCrias
+      if (result?.success) {
+        await Promise.all([refetchReproducciones(), refetchProximosPartos()])
+      }
+      return {
+        success: result?.success || false,
+        data: result,
+        error: result?.message,
+      }
+    } catch (error) {
+      console.error('Error al registrar parto con crías:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
   return {
     // Data
-    inseminaciones: inseminaciones?.inseminaciones || [],
-    montasNaturales: montasNaturales?.montasNaturales || [],
-    diagnosticos: diagnosticos?.diagnosticosPrenez || [],
-    reproducciones: reproducciones?.reproducciones || [],
-    vacasPrenadas: vacasPrenadas?.vacasPrenadas || [],
-    proximosPartos: proximosPartos?.proximosPartos || [],
-    
-    // Loading states
+    inseminaciones: inseminacionesData?.inseminaciones || [],
+    montasNaturales: montasData?.montasNaturales || [],
+    diagnosticos: diagnosticosData?.diagnosticosPrenez || [],
+    reproducciones: reproduccionesData?.reproducciones || [],
+    vacasPrenadas: vacasPrenadasData?.vacasPrenadas || [],
+    proximosPartos: proximosPartosData?.proximosPartos || [],
+
+    // Loading
     loading: loadingInseminaciones || loadingMontas || loadingDiagnosticos || loadingReproducciones,
-    
+
     // Functions
     crearInseminacion,
     crearDiagnostico,
     crearReproduccion,
-    
+    registrarPartoConCrias,
+
     // Refetch
     refetchInseminaciones,
+    refetchReproducciones,
     refetchProximosPartos,
   }
 }

@@ -26,6 +26,119 @@ export const GET_ANIMALES = gql`
   }
 `
 
+export const GET_ANIMALES_PAGINADOS = gql`
+  query GetAnimalesPaginados(
+    $fincaId: ID
+    $pagina: Int
+    $porPagina: Int
+    $buscar: String
+    $estado: String
+    $ordenar: String
+    $razaId: ID
+    $categoriaId: ID
+  ) {
+    animalesPaginados(
+      fincaId: $fincaId
+      pagina: $pagina
+      porPagina: $porPagina
+      buscar: $buscar
+      estado: $estado
+      ordenar: $ordenar
+      razaId: $razaId
+      categoriaId: $categoriaId
+    ) {
+      total
+      paginas
+      paginaActual
+      tieneSiguiente
+      tieneAnterior
+      animales {
+        id
+        nroArete
+        nombre
+        sexo
+        fechaNacimiento
+        estado
+        peso
+        origen
+        fechaRegistro
+        raza { id nombre }
+        categoria { id nombre }
+      }
+    }
+  }
+`
+
+export const GET_ANIMAL_DETALLE = gql`
+  query GetAnimalDetalle($id: ID!) {
+    animalDetalle(id: $id) {
+      id
+      nroArete
+      nombre
+      sexo
+      estado
+      origen
+      fechaNacimiento
+      fechaIngreso
+      edadIngresoMeses
+      peso
+      pesoNacimiento
+      tipoProduccion
+      observaciones
+      raza { id nombre }
+      categoria { id nombre }
+      padre {
+        id
+        nroArete
+        nombre
+        sexo
+        estado
+        raza { nombre }
+        categoria { nombre }
+      }
+      madre {
+        id
+        nroArete
+        nombre
+        sexo
+        estado
+        raza { nombre }
+        categoria { nombre }
+      }
+      descendencia {
+        id
+        nroArete
+        nombre
+        sexo
+        fechaNacimiento
+        estado
+      }
+    }
+  }
+`
+
+export const GET_ANIMALES_MACHOS = gql`
+  query GetAnimalesMachos($fincaId: ID!, $excluirId: ID) {
+    animalesMachosParaPadre(fincaId: $fincaId, excluirId: $excluirId) {
+      id
+      nroArete
+      nombre
+      estado
+    }
+  }
+`
+
+export const GET_ANIMALES_HEMBRAS = gql`
+  query GetAnimalesHembras($fincaId: ID!, $excluirId: ID) {
+    animalesHembrasParaMadre(fincaId: $fincaId, excluirId: $excluirId) {
+      id
+      nroArete
+      nombre
+      estado
+    }
+  }
+`
+
 export const GET_RAZAS = gql`
   query GetRazas {
     razas {
@@ -50,24 +163,41 @@ export const GET_CATEGORIAS = gql`
 
 export const CREATE_ANIMAL = gql`
   mutation CrearAnimal(
-    $fincaId: Int!
-    $arete: String!
+    $fincaId: ID!
+    $nroArete: String!
     $nombre: String
-    $fechaNacimiento: Date!
     $sexo: String!
-    $razaId: Int!
-    $categoriaId: Int!
+    $razaId: ID
+    $categoriaId: ID
+    $estado: String
+    $fechaNacimiento: Date
+    $fechaIngreso: Date
+    $edadIngresoMeses: Int
     $peso: Decimal
+    $pesoNacimiento: Decimal
+    $tipoProduccion: String
+    $origen: String
+    $observaciones: String
+    $padreId: ID
+    $madreId: ID
   ) {
     crearAnimal(
       fincaId: $fincaId
-      arete: $arete
+      nroArete: $nroArete
       nombre: $nombre
-      fechaNacimiento: $fechaNacimiento
       sexo: $sexo
       razaId: $razaId
       categoriaId: $categoriaId
+      fechaNacimiento: $fechaNacimiento
+      fechaIngreso: $fechaIngreso
+      edadIngresoMeses: $edadIngresoMeses
       peso: $peso
+      pesoNacimiento: $pesoNacimiento
+      tipoProduccion: $tipoProduccion
+      origen: $origen
+      observaciones: $observaciones
+      padreId: $padreId
+      madreId: $madreId
     ) {
       animal {
         id
@@ -84,17 +214,42 @@ export const UPDATE_ANIMAL = gql`
   mutation ActualizarAnimal(
     $id: ID!
     $nombre: String
+    $sexo: String
+    $razaId: ID
+    $categoriaId: ID
     $estado: String
+    $fechaNacimiento: Date
+    $fechaIngreso: Date
+    $edadIngresoMeses: Int
     $peso: Decimal
+    $pesoNacimiento: Decimal
+    $tipoProduccion: String
+    $origen: String
+    $observaciones: String
+    $padreId: ID
+    $madreId: ID
   ) {
     actualizarAnimal(
       id: $id
       nombre: $nombre
+      sexo: $sexo
+      razaId: $razaId
+      categoriaId: $categoriaId
       estado: $estado
+      fechaNacimiento: $fechaNacimiento
+      fechaIngreso: $fechaIngreso
+      edadIngresoMeses: $edadIngresoMeses
       peso: $peso
+      pesoNacimiento: $pesoNacimiento
+      tipoProduccion: $tipoProduccion
+      origen: $origen
+      observaciones: $observaciones
+      padreId: $padreId
+      madreId: $madreId
     ) {
       animal {
         id
+        nroArete
         nombre
         estado
         peso

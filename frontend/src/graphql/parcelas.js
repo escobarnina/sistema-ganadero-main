@@ -188,3 +188,54 @@ export const SACAR_ANIMAL_DE_PARCELA = gql`
     }
   }
 `
+
+// ==========================================
+// QUERY PAGINADA CON BÚSQUEDA Y FILTROS
+// ==========================================
+
+export const GET_PARCELAS_PAGINADAS = gql`
+  query ParcelasPaginadas(
+    $fincaId: ID!
+    $search: String
+    $estado: String
+    $temporal: String
+    $ordering: String
+    $page: Int
+    $pageSize: Int
+  ) {
+    parcelasPaginadas(
+      fincaId: $fincaId
+      search: $search
+      estado: $estado
+      temporal: $temporal
+      ordering: $ordering
+      page: $page
+      pageSize: $pageSize
+    ) {
+      count
+      page
+      pageSize
+      totalPages
+      hasNext
+      hasPrevious
+      results {
+        id
+        nombre
+        estado
+        tamano
+        capacidadMaxima
+        tipoPastura
+        ocupacionActual
+        animalesActuales {
+          id
+          animal {
+            id
+            nroArete
+            nombre
+          }
+          fechaIngreso
+        }
+      }
+    }
+  }
+`

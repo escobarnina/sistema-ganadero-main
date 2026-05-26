@@ -114,6 +114,7 @@ class DetalleVenta(models.Model):
 class MuerteBaja(models.Model):
     TIPO_BAJA_CHOICES = [
         ("MUERTE", "Muerte"),
+        ("ROBO", "Robo"),
         ("SACRIFICIO", "Sacrificio"),
         ("DESCARTE", "Descarte"),
         ("PERDIDA", "Pérdida"),

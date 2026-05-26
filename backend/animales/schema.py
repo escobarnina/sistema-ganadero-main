@@ -7,6 +7,15 @@ from datetime import date
 from .models import Raza, CategoriaAnimal, Animal, Parcela, AnimalParcela
 
 
+class AnimalesPaginadosType(graphene.ObjectType):
+    animales = graphene.List(lambda: AnimalType)
+    total = graphene.Int()
+    paginas = graphene.Int()
+    pagina_actual = graphene.Int()
+    tiene_siguiente = graphene.Boolean()
+    tiene_anterior = graphene.Boolean()
+
+
 # ==========================================
 # TYPES EXISTENTES
 # ==========================================
@@ -24,9 +33,17 @@ class CategoriaAnimalType(DjangoObjectType):
 
 
 class AnimalType(DjangoObjectType):
+    descendencia = graphene.List(lambda: AnimalType)
+
     class Meta:
         model = Animal
         fields = "__all__"
+
+    def resolve_descendencia(self, info):
+        from django.db.models import Q
+        return Animal.objects.filter(
+            Q(padre_id=self.id) | Q(madre_id=self.id)
+        ).select_related('raza', 'categoria')
 
 
 # ==========================================
@@ -35,6 +52,7 @@ class AnimalType(DjangoObjectType):
 
 class ParcelaType(DjangoObjectType):
     animalesActuales = graphene.List('animales.schema.AnimalParcelaType')
+    ocupacionActual = graphene.Int()
 
     class Meta:
         model = Parcela
@@ -43,11 +61,26 @@ class ParcelaType(DjangoObjectType):
     def resolve_animalesActuales(self, info):
         return self.historial_animales.filter(fecha_salida__isnull=True)
 
+    def resolve_ocupacionActual(self, info):
+        if hasattr(self, 'ocupacion_actual'):
+            return self.ocupacion_actual
+        return self.historial_animales.filter(fecha_salida__isnull=True).count()
+
 
 class AnimalParcelaType(DjangoObjectType):
     class Meta:
         model = AnimalParcela
         fields = "__all__"
+
+
+class ParcelasPaginadasType(graphene.ObjectType):
+    results = graphene.List(ParcelaType)
+    count = graphene.Int()
+    page = graphene.Int()
+    page_size = graphene.Int()
+    total_pages = graphene.Int()
+    has_next = graphene.Boolean()
+    has_previous = graphene.Boolean()
 
 
 # ==========================================
@@ -63,11 +96,49 @@ class Query(graphene.ObjectType):
     animal_by_arete = graphene.Field(AnimalType, nro_arete=graphene.String(required=True))
     animales_activos = graphene.List(AnimalType, finca_id=graphene.ID(required=True))
 
+    # Queries de genealogía
+    animal_detalle = graphene.Field(AnimalType, id=graphene.ID(required=True))
+    animales_machos_para_padre = graphene.List(
+        AnimalType,
+        finca_id=graphene.ID(required=True),
+        excluir_id=graphene.ID(),
+    )
+    animales_hembras_para_madre = graphene.List(
+        AnimalType,
+        finca_id=graphene.ID(required=True),
+        excluir_id=graphene.ID(),
+    )
+
+    # Query paginada con búsqueda y filtros
+    animales_paginados = graphene.Field(
+        AnimalesPaginadosType,
+        finca_id=graphene.ID(),
+        pagina=graphene.Int(),
+        por_pagina=graphene.Int(),
+        buscar=graphene.String(),
+        estado=graphene.String(),
+        ordenar=graphene.String(),
+        raza_id=graphene.ID(),
+        categoria_id=graphene.ID(),
+    )
+
     # Nuevas queries para parcelas
     parcelas = graphene.List(ParcelaType, finca_id=graphene.ID(required=True))
     parcela = graphene.Field(ParcelaType, id=graphene.ID(required=True))
     animales_en_parcela = graphene.List(AnimalParcelaType, parcela_id=graphene.ID(required=True))
     animales_actuales_parcela = graphene.List(AnimalParcelaType, parcela_id=graphene.ID(required=True))
+
+    # Query paginada para parcelas con búsqueda, filtros y ordenamiento
+    parcelas_paginadas = graphene.Field(
+        ParcelasPaginadasType,
+        finca_id=graphene.ID(required=True),
+        search=graphene.String(),
+        estado=graphene.String(),
+        temporal=graphene.String(),
+        ordering=graphene.String(),
+        page=graphene.Int(),
+        page_size=graphene.Int(),
+    )
 
     def resolve_razas(self, info):
         return Raza.objects.all()
@@ -87,6 +158,101 @@ class Query(graphene.ObjectType):
     def resolve_animales_activos(self, info, finca_id):
         return Animal.objects.filter(finca_id=finca_id, estado='ACTIVO')
 
+    def resolve_animal_detalle(self, info, id):
+        return Animal.objects.select_related(
+            'raza', 'categoria',
+            'padre', 'padre__raza', 'padre__categoria',
+            'madre', 'madre__raza', 'madre__categoria',
+        ).get(id=id)
+
+    def resolve_animales_machos_para_padre(self, info, finca_id, excluir_id=None):
+        qs = Animal.objects.filter(finca_id=finca_id, sexo='MACHO').select_related('raza', 'categoria')
+        if excluir_id:
+            qs = qs.exclude(id=excluir_id)
+        return qs.order_by('nro_arete')
+
+    def resolve_animales_hembras_para_madre(self, info, finca_id, excluir_id=None):
+        qs = Animal.objects.filter(finca_id=finca_id, sexo='HEMBRA').select_related('raza', 'categoria')
+        if excluir_id:
+            qs = qs.exclude(id=excluir_id)
+        return qs.order_by('nro_arete')
+
+    def resolve_animales_paginados(
+        self, info,
+        finca_id=None, pagina=1, por_pagina=10,
+        buscar=None, estado=None, ordenar=None,
+        raza_id=None, categoria_id=None,
+    ):
+        from django.db.models import Q, IntegerField, Value, Case, When
+
+        qs = Animal.objects.select_related('raza', 'categoria')
+        if finca_id:
+            qs = qs.filter(finca_id=finca_id)
+
+        if buscar:
+            qs = qs.filter(
+                Q(nombre__icontains=buscar) |
+                Q(nro_arete__icontains=buscar) |
+                Q(raza__nombre__icontains=buscar) |
+                Q(categoria__nombre__icontains=buscar) |
+                Q(estado__icontains=buscar)
+            )
+
+        if estado and estado not in ('', 'TODOS'):
+            qs = qs.filter(estado=estado)
+
+        if raza_id:
+            qs = qs.filter(raza_id=raza_id)
+
+        if categoria_id:
+            qs = qs.filter(categoria_id=categoria_id)
+
+        if ordenar == 'arete_az':
+            qs = qs.order_by('nro_arete')
+        elif ordenar == 'arete_za':
+            qs = qs.order_by('-nro_arete')
+        elif ordenar == 'nombre_az':
+            qs = qs.order_by('nombre')
+        elif ordenar == 'nombre_za':
+            qs = qs.order_by('-nombre')
+        elif ordenar == 'mayor_peso':
+            qs = qs.order_by('-peso', '-fecha_registro')
+        elif ordenar == 'menor_peso':
+            qs = qs.order_by('peso', '-fecha_registro')
+        elif ordenar == 'mayor_edad':
+            # fecha_nacimiento más antigua = animal más viejo
+            qs = qs.order_by('fecha_nacimiento', '-fecha_registro')
+        elif ordenar == 'menor_edad':
+            # fecha_nacimiento más reciente = animal más joven
+            qs = qs.order_by('-fecha_nacimiento', '-fecha_registro')
+        elif ordenar in ('activos_primero', 'bajas_final'):
+            qs = qs.annotate(
+                orden_estado=Case(
+                    When(estado='ACTIVO', then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            ).order_by('orden_estado', '-fecha_registro')
+        elif ordenar == 'antiguos':
+            qs = qs.order_by('fecha_registro')
+        else:
+            qs = qs.order_by('-fecha_registro')
+
+        por_pagina = max(1, min(por_pagina, 100))
+        total = qs.count()
+        paginas = max(1, (total + por_pagina - 1) // por_pagina)
+        pagina = max(1, min(pagina, paginas))
+        offset = (pagina - 1) * por_pagina
+
+        return AnimalesPaginadosType(
+            animales=list(qs[offset:offset + por_pagina]),
+            total=total,
+            paginas=paginas,
+            pagina_actual=pagina,
+            tiene_siguiente=pagina < paginas,
+            tiene_anterior=pagina > 1,
+        )
+
     # Resolvers para parcelas
     def resolve_parcelas(self, info, finca_id):
         return Parcela.objects.filter(finca_id=finca_id)
@@ -99,6 +265,87 @@ class Query(graphene.ObjectType):
 
     def resolve_animales_actuales_parcela(self, info, parcela_id):
         return AnimalParcela.objects.filter(parcela_id=parcela_id, fecha_salida__isnull=True)
+
+    def resolve_parcelas_paginadas(
+        self, info, finca_id,
+        search=None, estado=None, temporal=None, ordering=None,
+        page=1, page_size=10,
+    ):
+        from django.db.models import Count, Q, OuterRef, Subquery, IntegerField, Value
+        from django.db.models.functions import Coalesce
+        from datetime import timedelta
+        from django.utils import timezone
+
+        hoy = timezone.now().date()
+
+        ocupacion_sq = AnimalParcela.objects.filter(
+            parcela=OuterRef('pk'),
+            fecha_salida__isnull=True,
+        ).values('parcela').annotate(cnt=Count('id')).values('cnt')
+
+        qs = Parcela.objects.filter(finca_id=finca_id).annotate(
+            ocupacion_actual=Coalesce(
+                Subquery(ocupacion_sq, output_field=IntegerField()),
+                Value(0),
+            )
+        )
+
+        if search:
+            qs = qs.filter(
+                Q(nombre__icontains=search) |
+                Q(estado__icontains=search) |
+                Q(tipo_pastura__icontains=search) |
+                Q(historial_animales__animal__nombre__icontains=search,
+                  historial_animales__fecha_salida__isnull=True) |
+                Q(historial_animales__animal__nro_arete__icontains=search,
+                  historial_animales__fecha_salida__isnull=True)
+            ).distinct()
+
+        if estado and estado not in ('', 'TODOS'):
+            qs = qs.filter(estado=estado)
+
+        if temporal == 'ultimos_movimientos':
+            qs = qs.filter(
+                historial_animales__fecha_ingreso__gte=hoy - timedelta(days=30)
+            ).distinct()
+        elif temporal == 'animales_agregados_recientemente':
+            qs = qs.filter(
+                historial_animales__fecha_ingreso__gte=hoy - timedelta(days=7)
+            ).distinct()
+        elif temporal == 'movimientos_recientes':
+            qs = qs.filter(
+                Q(historial_animales__fecha_ingreso__gte=hoy - timedelta(days=7)) |
+                Q(historial_animales__fecha_salida__gte=hoy - timedelta(days=7))
+            ).distinct()
+
+        if ordering == 'mayor_ocupacion':
+            qs = qs.order_by('-ocupacion_actual')
+        elif ordering == 'menor_ocupacion':
+            qs = qs.order_by('ocupacion_actual')
+        elif ordering == 'mayor_capacidad':
+            qs = qs.order_by('-capacidad_maxima')
+        elif ordering == 'menor_capacidad':
+            qs = qs.order_by('capacidad_maxima')
+        elif ordering == 'mas_antiguas':
+            qs = qs.order_by('id')
+        else:
+            qs = qs.order_by('-id')
+
+        page_size = max(1, min(page_size or 10, 100))
+        count = qs.count()
+        total_pages = max(1, (count + page_size - 1) // page_size)
+        page = max(1, min(page or 1, total_pages))
+        offset = (page - 1) * page_size
+
+        return ParcelasPaginadasType(
+            results=list(qs[offset:offset + page_size]),
+            count=count,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            has_next=page < total_pages,
+            has_previous=page > 1,
+        )
 
 
 # ==========================================
@@ -250,7 +497,10 @@ class CrearAnimal(graphene.Mutation):
         nro_arete = graphene.String(required=True)
         sexo = graphene.String(required=True)
         fecha_nacimiento = graphene.Date()
+        fecha_ingreso = graphene.Date()
+        edad_ingreso_meses = graphene.Int()
         peso = graphene.Decimal()
+        peso_nacimiento = graphene.Decimal()
         tipo_produccion = graphene.String()
         origen = graphene.String()
         color = graphene.String()
@@ -277,7 +527,10 @@ class CrearAnimal(graphene.Mutation):
                 madre_id=kwargs.get('madre_id'),
                 nombre=kwargs.get('nombre'),
                 fecha_nacimiento=kwargs.get('fecha_nacimiento'),
+                fecha_ingreso=kwargs.get('fecha_ingreso'),
+                edad_ingreso_meses=kwargs.get('edad_ingreso_meses', 0),
                 peso=kwargs.get('peso', 0),
+                peso_nacimiento=kwargs.get('peso_nacimiento', 0),
                 tipo_produccion=kwargs.get('tipo_produccion', 'DOBLE_PROPOSITO'),
                 origen=kwargs.get('origen', 'NACIDO_FINCA'),
                 color=kwargs.get('color'),
@@ -293,12 +546,18 @@ class ActualizarAnimal(graphene.Mutation):
         id = graphene.ID(required=True)
         raza_id = graphene.ID()
         categoria_id = graphene.ID()
+        padre_id = graphene.ID()
+        madre_id = graphene.ID()
         nombre = graphene.String()
         sexo = graphene.String()
         fecha_nacimiento = graphene.Date()
+        fecha_ingreso = graphene.Date()
+        edad_ingreso_meses = graphene.Int()
         peso = graphene.Decimal()
+        peso_nacimiento = graphene.Decimal()
         estado = graphene.String()
         tipo_produccion = graphene.String()
+        origen = graphene.String()
         observaciones = graphene.String()
 
     animal = graphene.Field(AnimalType)
@@ -313,18 +572,31 @@ class ActualizarAnimal(graphene.Mutation):
                 animal.raza_id = kwargs['raza_id']
             if kwargs.get('categoria_id'):
                 animal.categoria_id = kwargs['categoria_id']
+            # padre/madre usan 'in kwargs' para poder limpiar con null
+            if 'padre_id' in kwargs:
+                animal.padre_id = kwargs['padre_id']
+            if 'madre_id' in kwargs:
+                animal.madre_id = kwargs['madre_id']
             if kwargs.get('nombre') is not None:
                 animal.nombre = kwargs['nombre']
             if kwargs.get('sexo'):
                 animal.sexo = kwargs['sexo']
             if kwargs.get('fecha_nacimiento'):
                 animal.fecha_nacimiento = kwargs['fecha_nacimiento']
+            if kwargs.get('fecha_ingreso'):
+                animal.fecha_ingreso = kwargs['fecha_ingreso']
+            if kwargs.get('edad_ingreso_meses') is not None:
+                animal.edad_ingreso_meses = kwargs['edad_ingreso_meses']
             if kwargs.get('peso'):
                 animal.peso = kwargs['peso']
+            if kwargs.get('peso_nacimiento') is not None:
+                animal.peso_nacimiento = kwargs['peso_nacimiento']
             if kwargs.get('estado'):
                 animal.estado = kwargs['estado']
             if kwargs.get('tipo_produccion'):
                 animal.tipo_produccion = kwargs['tipo_produccion']
+            if kwargs.get('origen'):
+                animal.origen = kwargs['origen']
             if kwargs.get('observaciones') is not None:
                 animal.observaciones = kwargs['observaciones']
             animal.save()

@@ -1,11 +1,11 @@
 import { useQuery, useMutation } from '@apollo/client'
-import { 
-  GET_ANIMALES, 
-  CREATE_ANIMAL, 
-  UPDATE_ANIMAL, 
-  DELETE_ANIMAL, 
-  GET_RAZAS, 
-  GET_CATEGORIAS 
+import {
+  GET_ANIMALES,
+  CREATE_ANIMAL,
+  UPDATE_ANIMAL,
+  DELETE_ANIMAL,
+  GET_RAZAS,
+  GET_CATEGORIAS,
 } from '../graphql/animales'
 
 export const useAnimales = () => {
@@ -20,18 +20,27 @@ export const useAnimales = () => {
   const crearAnimal = async (input) => {
     try {
       const variables = {
-        fincaId: input.fincaId || 1,
-        arete: input.arete,
-        nombre: input.nombre,
-        fechaNacimiento: input.fechaNacimiento,
+        fincaId: String(input.fincaId || 1),
+        nroArete: input.nroArete,
+        nombre: input.nombre || null,
         sexo: input.sexo,
-        razaId: input.razaId ? parseInt(input.razaId) : null,
-        categoriaId: input.categoriaId ? parseInt(input.categoriaId) : null,
+        razaId: input.razaId ? String(input.razaId) : null,
+        categoriaId: input.categoriaId ? String(input.categoriaId) : null,
+        estado: input.estado || null,
+        fechaNacimiento: input.fechaNacimiento || null,
+        fechaIngreso: input.fechaIngreso || null,
+        edadIngresoMeses: input.edadIngresoMeses ? parseInt(input.edadIngresoMeses) : null,
         peso: input.peso ? parseFloat(input.peso) : null,
+        pesoNacimiento: input.pesoNacimiento ? parseFloat(input.pesoNacimiento) : null,
+        tipoProduccion: input.tipoProduccion || null,
+        origen: input.origen || null,
+        observaciones: input.observaciones || null,
+        padreId: input.padreId ? String(input.padreId) : null,
+        madreId: input.madreId ? String(input.madreId) : null,
       }
-      
+
       const result = await createAnimal({ variables })
-      
+
       if (result.data?.crearAnimal?.success) {
         refetch()
         return { success: true, message: result.data.crearAnimal.message }
@@ -45,14 +54,26 @@ export const useAnimales = () => {
 
   const actualizarAnimal = async (id, input) => {
     try {
-      const result = await updateAnimal({ 
-        variables: { 
-          id, 
-          nombre: input.nombre,
-          estado: input.estado,
-          peso: input.peso ? parseFloat(input.peso) : null
-        } 
-      })
+      const variables = { id }
+
+      if (input.nombre !== undefined) variables.nombre = input.nombre
+      if (input.sexo) variables.sexo = input.sexo
+      if (input.razaId !== undefined) variables.razaId = input.razaId ? String(input.razaId) : null
+      if (input.categoriaId !== undefined) variables.categoriaId = input.categoriaId ? String(input.categoriaId) : null
+      if (input.estado) variables.estado = input.estado
+      if (input.fechaNacimiento !== undefined) variables.fechaNacimiento = input.fechaNacimiento || null
+      if (input.fechaIngreso !== undefined) variables.fechaIngreso = input.fechaIngreso || null
+      if (input.edadIngresoMeses !== undefined) variables.edadIngresoMeses = input.edadIngresoMeses ? parseInt(input.edadIngresoMeses) : null
+      if (input.peso !== undefined) variables.peso = input.peso ? parseFloat(input.peso) : null
+      if (input.pesoNacimiento !== undefined) variables.pesoNacimiento = input.pesoNacimiento ? parseFloat(input.pesoNacimiento) : null
+      if (input.tipoProduccion) variables.tipoProduccion = input.tipoProduccion
+      if (input.origen) variables.origen = input.origen
+      if (input.observaciones !== undefined) variables.observaciones = input.observaciones
+      // padre/madre: se incluyen si están presentes en input (null = limpiar)
+      if ('padreId' in input) variables.padreId = input.padreId ? String(input.padreId) : null
+      if ('madreId' in input) variables.madreId = input.madreId ? String(input.madreId) : null
+
+      const result = await updateAnimal({ variables })
       if (result.data?.actualizarAnimal?.success) {
         refetch()
         return { success: true, message: result.data.actualizarAnimal.message }
@@ -87,6 +108,6 @@ export const useAnimales = () => {
     crearAnimal,
     actualizarAnimal,
     eliminarAnimal,
-    refetch
+    refetch,
   }
 }
