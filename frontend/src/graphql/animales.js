@@ -84,34 +84,66 @@ export const GET_ANIMAL_DETALLE = gql`
       peso
       pesoNacimiento
       tipoProduccion
+      color
       observaciones
       raza { id nombre }
       categoria { id nombre }
       padre {
-        id
-        nroArete
-        nombre
-        sexo
-        estado
+        id nroArete nombre sexo estado
         raza { nombre }
         categoria { nombre }
       }
       madre {
-        id
-        nroArete
-        nombre
-        sexo
-        estado
+        id nroArete nombre sexo estado
         raza { nombre }
         categoria { nombre }
       }
       descendencia {
-        id
-        nroArete
-        nombre
-        sexo
-        fechaNacimiento
-        estado
+        id nroArete nombre sexo fechaNacimiento estado
+      }
+      registrosPeso {
+        id fechaPesaje pesoKg condicionCorporal observacion
+      }
+      lactancias {
+        id numeroLactancia fechaInicio fechaSecado totalLitros promedioDiario estado
+      }
+      produccionesLeche {
+        id fecha turno litros
+      }
+      inseminaciones {
+        id fecha resultado fechaProbableParto numeroServicio
+        reproductor { id codigo nombre tipoOrigen }
+      }
+      diagnosticosPrenez {
+        id fecha resultadoPrenez diasGestacion metodo fechaConfirmacion fechaProbableParto
+      }
+      partos {
+        id fechaPartoReal tipoParto numCrias estado
+        crias { id nroArete nombre sexo }
+      }
+      vacunaciones {
+        id fechaAplicacion dosisAplicada fechaProxima
+        vacuna { nombre }
+        veterinario { nombre apellidos }
+      }
+      tratamientos {
+        id fechaInicio fechaFin diagnostico enTratamiento
+        medicamento { nombre }
+        veterinario { nombre apellidos }
+      }
+      movimientosParcela {
+        id fechaIngreso fechaSalida
+        parcela { id nombre estado }
+      }
+      ventas {
+        id precioUnitario pesoVentaKg subTotal
+        notaVenta {
+          fechaVenta guiaSalida
+          cliente { nombre apellidos }
+        }
+      }
+      bajas {
+        id fechaBaja tipo causa descripcion pesoEstimadoKg
       }
     }
   }

@@ -6,6 +6,48 @@ from datetime import date
 
 from .models import Raza, CategoriaAnimal, Animal, Parcela, AnimalParcela
 
+# Importaciones diferidas de tipos de otras apps (se hacen lazy dentro de lambdas
+# para evitar problemas de orden de registro en el arranque de graphene).
+def _get_registro_peso_type():
+    from produccion.schema import RegistroPesoType
+    return RegistroPesoType
+
+def _get_lactancia_type():
+    from produccion.schema import LactanciaType
+    return LactanciaType
+
+def _get_produccion_leche_type():
+    from produccion.schema import ProduccionLecheType
+    return ProduccionLecheType
+
+def _get_inseminacion_type():
+    from reproduccion.schema import InseminacionArtificialType
+    return InseminacionArtificialType
+
+def _get_diagnostico_prenez_type():
+    from reproduccion.schema import DiagnosticoPrenezType
+    return DiagnosticoPrenezType
+
+def _get_reproduccion_type():
+    from reproduccion.schema import ReproduccionType
+    return ReproduccionType
+
+def _get_vacunacion_type():
+    from sanidad.schema import VacunacionType
+    return VacunacionType
+
+def _get_tratamiento_type():
+    from sanidad.schema import TratamientoType
+    return TratamientoType
+
+def _get_detalle_venta_type():
+    from comercio.schema import DetalleVentaType
+    return DetalleVentaType
+
+def _get_muerte_baja_type():
+    from comercio.schema import MuerteBajaType
+    return MuerteBajaType
+
 
 class AnimalesPaginadosType(graphene.ObjectType):
     animales = graphene.List(lambda: AnimalType)
@@ -35,6 +77,27 @@ class CategoriaAnimalType(DjangoObjectType):
 class AnimalType(DjangoObjectType):
     descendencia = graphene.List(lambda: AnimalType)
 
+    # Producción
+    registros_peso = graphene.List(lambda: _get_registro_peso_type())
+    lactancias = graphene.List(lambda: _get_lactancia_type())
+    producciones_leche = graphene.List(lambda: _get_produccion_leche_type())
+
+    # Reproducción
+    inseminaciones = graphene.List(lambda: _get_inseminacion_type())
+    diagnosticos_prenez = graphene.List(lambda: _get_diagnostico_prenez_type())
+    partos = graphene.List(lambda: _get_reproduccion_type())
+
+    # Sanidad
+    vacunaciones = graphene.List(lambda: _get_vacunacion_type())
+    tratamientos = graphene.List(lambda: _get_tratamiento_type())
+
+    # Movimientos
+    movimientos_parcela = graphene.List(lambda: AnimalParcelaType)
+
+    # Comercio
+    ventas = graphene.List(lambda: _get_detalle_venta_type())
+    bajas = graphene.List(lambda: _get_muerte_baja_type())
+
     class Meta:
         model = Animal
         fields = "__all__"
@@ -44,6 +107,53 @@ class AnimalType(DjangoObjectType):
         return Animal.objects.filter(
             Q(padre_id=self.id) | Q(madre_id=self.id)
         ).select_related('raza', 'categoria')
+
+    def resolve_registros_peso(self, info):
+        return self.registros_peso.all().order_by('-fecha_pesaje')
+
+    def resolve_lactancias(self, info):
+        return self.lactancias.all().order_by('-fecha_inicio')
+
+    def resolve_producciones_leche(self, info):
+        return self.producciones_leche.all().order_by('-fecha')
+
+    def resolve_inseminaciones(self, info):
+        return self.inseminacionartificial_eventos_reproductivos.all().select_related(
+            'reproductor'
+        ).order_by('-fecha')
+
+    def resolve_diagnosticos_prenez(self, info):
+        return self.diagnosticoprenez_eventos_reproductivos.all().select_related(
+            'veterinario'
+        ).order_by('-fecha')
+
+    def resolve_partos(self, info):
+        return self.reproducciones_como_madre.all().prefetch_related(
+            'crias'
+        ).order_by('-fecha_parto_real')
+
+    def resolve_vacunaciones(self, info):
+        return self.vacunaciones.all().select_related(
+            'vacuna', 'veterinario'
+        ).order_by('-fecha_aplicacion')
+
+    def resolve_tratamientos(self, info):
+        return self.tratamiento_eventos_sanitarios.all().select_related(
+            'medicamento', 'veterinario'
+        ).order_by('-fecha_inicio')
+
+    def resolve_movimientos_parcela(self, info):
+        return self.historial_parcelas.all().select_related(
+            'parcela'
+        ).order_by('-fecha_ingreso')
+
+    def resolve_ventas(self, info):
+        return self.detalles_venta.all().select_related(
+            'nota_venta', 'nota_venta__cliente'
+        ).order_by('-nota_venta__fecha_venta')
+
+    def resolve_bajas(self, info):
+        return self.muertes_bajas.all().order_by('-fecha_baja')
 
 
 # ==========================================
@@ -140,6 +250,13 @@ class Query(graphene.ObjectType):
         page_size=graphene.Int(),
     )
 
+    # Parcelas disponibles para mover un animal (LIBRE u OCUPADO con capacidad, excluyendo la actual)
+    parcelas_disponibles_para_movimiento = graphene.List(
+        ParcelaType,
+        finca_id=graphene.ID(required=True),
+        animal_id=graphene.ID(required=True),
+    )
+
     def resolve_razas(self, info):
         return Raza.objects.all()
 
@@ -163,6 +280,28 @@ class Query(graphene.ObjectType):
             'raza', 'categoria',
             'padre', 'padre__raza', 'padre__categoria',
             'madre', 'madre__raza', 'madre__categoria',
+        ).prefetch_related(
+            'registros_peso',
+            'lactancias',
+            'producciones_leche',
+            'inseminacionartificial_eventos_reproductivos',
+            'inseminacionartificial_eventos_reproductivos__reproductor',
+            'diagnosticoprenez_eventos_reproductivos',
+            'diagnosticoprenez_eventos_reproductivos__veterinario',
+            'reproducciones_como_madre',
+            'reproducciones_como_madre__crias',
+            'vacunaciones',
+            'vacunaciones__vacuna',
+            'vacunaciones__veterinario',
+            'tratamiento_eventos_sanitarios',
+            'tratamiento_eventos_sanitarios__medicamento',
+            'tratamiento_eventos_sanitarios__veterinario',
+            'historial_parcelas',
+            'historial_parcelas__parcela',
+            'detalles_venta',
+            'detalles_venta__nota_venta',
+            'detalles_venta__nota_venta__cliente',
+            'muertes_bajas',
         ).get(id=id)
 
     def resolve_animales_machos_para_padre(self, info, finca_id, excluir_id=None):
@@ -265,6 +404,37 @@ class Query(graphene.ObjectType):
 
     def resolve_animales_actuales_parcela(self, info, parcela_id):
         return AnimalParcela.objects.filter(parcela_id=parcela_id, fecha_salida__isnull=True)
+
+    def resolve_parcelas_disponibles_para_movimiento(self, info, finca_id, animal_id):
+        from django.db.models import Count, Q, OuterRef, Subquery, IntegerField, Value, F
+        from django.db.models.functions import Coalesce
+
+        parcela_actual_id = AnimalParcela.objects.filter(
+            animal_id=animal_id,
+            fecha_salida__isnull=True,
+        ).values_list('parcela_id', flat=True).first()
+
+        ocupacion_sq = AnimalParcela.objects.filter(
+            parcela=OuterRef('pk'),
+            fecha_salida__isnull=True,
+        ).values('parcela').annotate(cnt=Count('id')).values('cnt')
+
+        qs = Parcela.objects.filter(
+            finca_id=finca_id,
+            estado__in=['LIBRE', 'OCUPADO'],
+        ).annotate(
+            ocupacion_actual=Coalesce(
+                Subquery(ocupacion_sq, output_field=IntegerField()),
+                Value(0),
+            )
+        ).filter(
+            Q(capacidad_maxima=0) | Q(ocupacion_actual__lt=F('capacidad_maxima'))
+        )
+
+        if parcela_actual_id:
+            qs = qs.exclude(id=parcela_actual_id)
+
+        return qs.order_by('nombre')
 
     def resolve_parcelas_paginadas(
         self, info, finca_id,
@@ -733,8 +903,29 @@ class MoverAnimalAParcela(graphene.Mutation):
             from fincas.models import Finca
 
             finca = Finca.objects.get(id=finca_id)
-            animal = Animal.objects.get(id=animal_id)
-            parcela = Parcela.objects.get(id=parcela_id)
+            animal = Animal.objects.get(id=animal_id, finca=finca)
+            parcela = Parcela.objects.get(id=parcela_id, finca=finca)
+
+            if animal.estado != 'ACTIVO':
+                return MoverAnimalAParcela(movimiento=None, success=False,
+                    message="Solo se pueden mover animales con estado ACTIVO")
+
+            if parcela.estado == 'DESCANSO':
+                return MoverAnimalAParcela(movimiento=None, success=False,
+                    message="La parcela destino está en descanso y no puede recibir animales")
+
+            ocupacion_actual = AnimalParcela.objects.filter(
+                parcela=parcela, fecha_salida__isnull=True
+            ).count()
+            if parcela.capacidad_maxima > 0 and ocupacion_actual >= parcela.capacidad_maxima:
+                return MoverAnimalAParcela(movimiento=None, success=False,
+                    message=f"La parcela destino está llena ({ocupacion_actual}/{parcela.capacidad_maxima})")
+
+            # Guardar referencia a la parcela origen antes de cerrar el movimiento
+            movimiento_actual = AnimalParcela.objects.filter(
+                animal=animal, fecha_salida__isnull=True
+            ).select_related('parcela').first()
+            parcela_origen = movimiento_actual.parcela if movimiento_actual else None
 
             # Cerrar movimiento anterior
             AnimalParcela.objects.filter(
@@ -746,9 +937,28 @@ class MoverAnimalAParcela(graphene.Mutation):
                 animal=animal,
                 parcela=parcela,
                 fecha_ingreso=fecha_ingreso,
-                observaciones=kwargs.get('observaciones', '')
             )
+
+            # Actualizar estado parcela destino
+            parcela.estado = 'OCUPADO'
+            parcela.save(update_fields=['estado'])
+
+            # Actualizar estado parcela origen si es diferente a la destino
+            if parcela_origen and parcela_origen.id != parcela.id:
+                animales_restantes = AnimalParcela.objects.filter(
+                    parcela=parcela_origen, fecha_salida__isnull=True
+                ).count()
+                if parcela_origen.estado != 'DESCANSO':
+                    parcela_origen.estado = 'LIBRE' if animales_restantes == 0 else 'OCUPADO'
+                    parcela_origen.save(update_fields=['estado'])
+
             return MoverAnimalAParcela(movimiento=movimiento, success=True, message="Animal movido exitosamente")
+        except Animal.DoesNotExist:
+            return MoverAnimalAParcela(movimiento=None, success=False,
+                message="Animal no encontrado o no pertenece a esta finca")
+        except Parcela.DoesNotExist:
+            return MoverAnimalAParcela(movimiento=None, success=False,
+                message="Parcela no encontrada o no pertenece a esta finca")
         except Exception as e:
             return MoverAnimalAParcela(movimiento=None, success=False, message=str(e))
 

@@ -544,7 +544,8 @@ export default function AnimalesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="max-w-md w-full">
             <MoverAnimalForm
-              animal={selectedAnimal} parcelas={parcelas}
+              animal={selectedAnimal}
+              fincaId={fincaId}
               onSubmit={handleMoverAnimal}
               onCancel={() => { setShowMoverForm(false); setSelectedAnimal(null) }}
             />

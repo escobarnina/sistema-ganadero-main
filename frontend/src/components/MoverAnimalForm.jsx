@@ -1,7 +1,9 @@
 // frontend/src/components/MoverAnimalForm.jsx
 import React, { useState } from 'react'
+import { useQuery } from '@apollo/client'
+import { GET_PARCELAS_DISPONIBLES_PARA_MOVIMIENTO } from '../graphql/parcelas'
 
-const MoverAnimalForm = ({ animal, parcelas, onSubmit, onCancel }) => {
+const MoverAnimalForm = ({ animal, fincaId, onSubmit, onCancel }) => {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     animalId: animal.id,
@@ -10,7 +12,19 @@ const MoverAnimalForm = ({ animal, parcelas, onSubmit, onCancel }) => {
     observaciones: ''
   })
 
-  const parcelasActivas = parcelas.filter(p => p.estado === 'ACTIVA')
+  const { data, loading: loadingParcelas } = useQuery(GET_PARCELAS_DISPONIBLES_PARA_MOVIMIENTO, {
+    variables: { fincaId, animalId: animal.id },
+    fetchPolicy: 'network-only',
+    skip: !fincaId || !animal.id,
+  })
+
+  const parcelasDisponibles = data?.parcelasDisponiblesParaMovimiento || []
+
+  const estadoLabel = (estado) => {
+    if (estado === 'LIBRE') return 'Libre'
+    if (estado === 'OCUPADO') return 'Ocupado'
+    return estado
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -27,6 +41,8 @@ const MoverAnimalForm = ({ animal, parcelas, onSubmit, onCancel }) => {
     })
     setLoading(false)
   }
+
+  const canSubmit = !loading && !!formData.parcelaId && !!formData.fechaIngreso
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-xl p-6">
@@ -45,16 +61,20 @@ const MoverAnimalForm = ({ animal, parcelas, onSubmit, onCancel }) => {
           value={formData.parcelaId}
           onChange={(e) => setFormData({ ...formData, parcelaId: e.target.value })}
           className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={loadingParcelas}
         >
-          <option value="">Seleccionar parcela</option>
-          {parcelasActivas.map(p => (
+          <option value="">{loadingParcelas ? 'Cargando parcelas...' : 'Seleccionar parcela'}</option>
+          {parcelasDisponibles.map(p => (
             <option key={p.id} value={p.id}>
-              {p.nombre} - {p.animalesActuales?.length || 0}/{p.capacidadMaxima} animales
+              {p.nombre} - {estadoLabel(p.estado)} - {p.ocupacionActual}/{p.capacidadMaxima > 0 ? p.capacidadMaxima : '∞'} animales
             </option>
           ))}
         </select>
-        {parcelasActivas.length === 0 && (
-          <p className="text-red-500 text-sm mt-1">No hay parcelas activas disponibles</p>
+        {!loadingParcelas && parcelasDisponibles.length === 0 && (
+          <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded">
+            <p className="text-amber-700 text-sm font-medium">No hay parcelas disponibles para mover este animal</p>
+            <p className="text-amber-600 text-xs mt-1">Solo se muestran parcelas libres u ocupadas con capacidad disponible. Las parcelas en descanso o llenas no están disponibles.</p>
+          </div>
         )}
       </div>
 
@@ -83,8 +103,8 @@ const MoverAnimalForm = ({ animal, parcelas, onSubmit, onCancel }) => {
       <div className="flex gap-3 mt-6">
         <button
           type="submit"
-          disabled={loading || parcelasActivas.length === 0}
-          className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+          disabled={!canSubmit}
+          className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           {loading ? 'Moviendo...' : 'Mover a Parcela'}
         </button>

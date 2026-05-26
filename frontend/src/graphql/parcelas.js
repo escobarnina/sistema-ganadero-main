@@ -190,6 +190,22 @@ export const SACAR_ANIMAL_DE_PARCELA = gql`
 `
 
 // ==========================================
+// QUERY PARCELAS DISPONIBLES PARA MOVIMIENTO
+// ==========================================
+
+export const GET_PARCELAS_DISPONIBLES_PARA_MOVIMIENTO = gql`
+  query ParcelasDisponiblesParaMovimiento($fincaId: ID!, $animalId: ID!) {
+    parcelasDisponiblesParaMovimiento(fincaId: $fincaId, animalId: $animalId) {
+      id
+      nombre
+      estado
+      capacidadMaxima
+      ocupacionActual
+    }
+  }
+`
+
+// ==========================================
 // QUERY PAGINADA CON BÚSQUEDA Y FILTROS
 // ==========================================
 
